@@ -12,16 +12,24 @@
     <div class="bg-white p-8 rounded-xl shadow-lg w-96">
       <h1 class="text-2xl font-bold text-center mb-6">Create Account</h1>
 
-      <form action="{% url 'login' %}">
+      {% if messages %} {% for message in messages %}
+      <p class="text-red-500 text-sm mb-3">{{ message }}</p>
+      {% endfor %} {% endif %}
+
+      <form method="POST">
+        {% csrf_token %}
+
         <div class="grid grid-cols-2 gap-3 mb-3">
           <input
             type="text"
+            name="first_name"
             placeholder="First Name"
             class="px-3 py-2 border rounded-lg"
           />
 
           <input
             type="text"
+            name="last_name"
             placeholder="Last Name"
             class="px-3 py-2 border rounded-lg"
           />
@@ -29,24 +37,28 @@
 
         <input
           type="text"
+          name="username"
           placeholder="Username"
           class="w-full px-3 py-2 border rounded-lg mb-3"
         />
 
         <input
           type="email"
+          name="email"
           placeholder="Email Address"
           class="w-full px-3 py-2 border rounded-lg mb-3"
         />
 
         <input
           type="password"
+          name="password"
           placeholder="Password"
           class="w-full px-3 py-2 border rounded-lg mb-3"
         />
 
         <input
           type="password"
+          name="confirm_password"
           placeholder="Confirm Password"
           class="w-full px-3 py-2 border rounded-lg mb-5"
         />
@@ -59,12 +71,10 @@
         </button>
       </form>
 
-      <!-- NEW TEXT -->
       <p class="text-center text-sm text-gray-600 mt-4">
         Already have an account?
       </p>
 
-      <!-- FOOTER LINK -->
       <div class="text-center mt-1">
         <a href="{% url 'login' %}" class="text-blue-500 hover:underline">
           Back to Login
