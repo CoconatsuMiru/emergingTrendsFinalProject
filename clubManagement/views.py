@@ -1,15 +1,17 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login as auth_login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
+from .models import Organization, Membership
+
 
 def index(request):
-    return render(request, "index.html")  # landing page
+    return render(request, "index.html")
 
 
-def login(request):
+def login_view(request):
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
@@ -18,7 +20,7 @@ def login(request):
 
         if user is not None:
             auth_login(request, user)
-            return redirect("dashboard")  # go to dashboard
+            return redirect("dashboard")
         else:
             messages.error(request, "Invalid username or password")
 
@@ -36,22 +38,18 @@ def signUp(request):
 
         if password != confirm_password:
             messages.error(request, "Passwords do not match")
-            return redirect("signup")
-
-        if User.objects.filter(username=username).exists():
+        elif User.objects.filter(username=username).exists():
             messages.error(request, "Username already exists")
-            return redirect("signup")
-
-        User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-        )
-
-        messages.success(request, "Account created successfully")
-        return redirect("login")
+        else:
+            User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+            )
+            messages.success(request, "Account created successfully")
+            return redirect("login")
 
     return render(request, "signup.html")
 
@@ -60,9 +58,60 @@ def signUp(request):
 def dashboard(request):
     return render(request, "dashboard.html")
 
+
+# Check Big 4 roles
+def is_big_four(user, organization):
+    return Membership.objects.filter(
+        user=user,
+        organization=organization,
+        role__in=["PRES", "VPI", "VPE", "SEC", "TRE"]
+    ).exists()
+
+
 @login_required
 def organizations(request):
-    return render(request, "organisations.html")
+    user_orgs = Organization.objects.filter(membership__user=request.user)
+    return render(request, "organizations.html", {
+        "organizations": user_orgs
+    })
+
+
+@login_required
+def create_organization(request):
+    if request.method == "POST":
+        name = request.POST.get("name")
+        org = Organization.objects.create(name=name, owner=request.user)
+        Membership.objects.create(user=request.user, organization=org, role="PRES")
+    return redirect("organizations")
+
+
+@login_required
+def add_member(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not is_big_four(request.user, org):
+        return redirect("organizations")
+
+    if request.method == "POST":
+        username = request.POST.get("username")
+        role = request.POST.get("role")
+        try:
+            user = User.objects.get(username=username)
+            Membership.objects.create(user=user, organization=org, role=role)
+        except User.DoesNotExist:
+            pass
+
+    return redirect("organizations")
+
+
+@login_required
+def remove_member(request, org_id, user_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not is_big_four(request.user, org):
+        return redirect("organizations")
+
+    Membership.objects.filter(organization=org, user_id=user_id).delete()
+    return redirect("organizations")
+
 
 @login_required
 def tasks(request):
