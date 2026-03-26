@@ -56,10 +56,13 @@ def signUp(request):
 
 @login_required
 def dashboard(request):
-    return render(request, "dashboard.html")
+    user_orgs = Organization.objects.filter(membership__user=request.user)
+    return render(request, "dashboard.html", {
+        "active_page": "dashboard",
+        "organizations": user_orgs
+    })
 
 
-# Check Big 4 roles
 def is_big_four(user, organization):
     return Membership.objects.filter(
         user=user,
@@ -72,7 +75,24 @@ def is_big_four(user, organization):
 def organizations(request):
     user_orgs = Organization.objects.filter(membership__user=request.user)
     return render(request, "organizations.html", {
-        "organizations": user_orgs
+        "organizations": user_orgs,
+        "active_page": "organizations"
+    })
+
+
+@login_required
+def organization_detail(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    members = Membership.objects.filter(organization=org).select_related("user")
+    is_president = Membership.objects.filter(
+        user=request.user, organization=org, role="PRES"
+    ).exists()
+
+    return render(request, "organization_detail.html", {
+        "org": org,
+        "members": members,
+        "is_president": is_president,
+        "active_page": "organizations"
     })
 
 
@@ -80,7 +100,17 @@ def organizations(request):
 def create_organization(request):
     if request.method == "POST":
         name = request.POST.get("name")
-        org = Organization.objects.create(name=name, owner=request.user)
+        description = request.POST.get("description", "")
+        has_vp = request.POST.get("has_vp") == "on"
+        logo = request.FILES.get("logo")
+
+        org = Organization.objects.create(
+            name=name,
+            description=description,
+            has_vp=has_vp,
+            logo=logo,
+            owner=request.user
+        )
         Membership.objects.create(user=request.user, organization=org, role="PRES")
     return redirect("organizations")
 
@@ -115,9 +145,21 @@ def remove_member(request, org_id, user_id):
 
 @login_required
 def tasks(request):
-    return render(request, "task.html")
+    user_orgs = Organization.objects.filter(membership__user=request.user)
+    return render(request, "task.html", {
+        "active_page": "tasks",
+        "organizations": user_orgs
+    })
 
 
 def logout_user(request):
     logout(request)
     return redirect("login")
+
+
+@login_required
+def delete_organization(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if request.method == "POST" and org.owner == request.user:
+        org.delete()
+    return redirect("organizations")

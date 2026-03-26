@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from clubManagement import views  # your app name
+from clubManagement import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -11,6 +11,8 @@ urlpatterns = [
 
     path('dashboard/', views.dashboard, name='dashboard'),
     path('organizations/', views.organizations, name='organizations'),
+    path('organizations/<int:org_id>/', views.organization_detail, name='organization_detail'),
+    path('organizations/<int:org_id>/delete/', views.delete_organization, name='delete_organization'),
     path('tasks/', views.tasks, name='tasks'),
 
     path('create-org/', views.create_organization, name='create_organization'),
