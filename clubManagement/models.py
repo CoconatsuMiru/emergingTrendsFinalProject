@@ -7,7 +7,7 @@ class Organization(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, default="")
     logo = models.ImageField(upload_to="org_logos/", blank=True, null=True)
-    has_two_vp = models.BooleanField(default=False)  # True = VPI + VPE, False = single VP
+    has_two_vp = models.BooleanField(default=False)
     invitation_code = models.CharField(max_length=8, unique=True, blank=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -38,3 +38,23 @@ class Membership(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.role}"
+
+
+class Task(models.Model):
+    STATUS_CHOICES = [
+        ("TODO", "To Do"),
+        ("PROG", "In Progress"),
+        ("DONE", "Done"),
+    ]
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="tasks")
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default="")
+    assigned_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name="assigned_tasks")
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_tasks")
+    status = models.CharField(max_length=4, choices=STATUS_CHOICES, default="TODO")
+    due_date = models.DateField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title

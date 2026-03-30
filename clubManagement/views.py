@@ -4,7 +4,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
-from .models import Organization, Membership
+from .models import Organization, Membership, Task
 
 
 def index(request):
@@ -233,6 +233,95 @@ def tasks(request):
         "active_page": "tasks",
         "organizations": user_orgs
     })
+
+
+@login_required
+def org_tasks(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not Membership.objects.filter(user=request.user, organization=org).exists():
+        return redirect("tasks")
+
+    members = Membership.objects.filter(organization=org).select_related("user")
+    user_is_big_four = is_big_four(request.user, org)
+
+    # Big four see all tasks, members only see their own
+    if user_is_big_four:
+        org_task_list = Task.objects.filter(organization=org).select_related("assigned_to")
+    else:
+        org_task_list = Task.objects.filter(organization=org, assigned_to=request.user)
+
+    return render(request, "org_tasks.html", {
+        "org": org,
+        "tasks": org_task_list,
+        "members": members,
+        "is_big_four": user_is_big_four,
+        "active_page": "tasks"
+    })
+
+
+@login_required
+def add_task(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not is_big_four(request.user, org):
+        messages.error(request, "You do not have permission to do this.")
+        return redirect("org_tasks", org_id=org_id)
+
+    if request.method == "POST":
+        title = request.POST.get("title")
+        description = request.POST.get("description", "")
+        assigned_to_id = request.POST.get("assigned_to")
+        due_date = request.POST.get("due_date") or None
+        assigned_to = get_object_or_404(User, id=assigned_to_id)
+
+        Task.objects.create(
+            organization=org,
+            title=title,
+            description=description,
+            assigned_to=assigned_to,
+            created_by=request.user,
+            due_date=due_date
+        )
+        messages.success(request, f"Task '{title}' has been added.")
+
+    return redirect("org_tasks", org_id=org_id)
+
+
+@login_required
+def edit_task(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not is_big_four(request.user, org):
+        messages.error(request, "You do not have permission to do this.")
+        return redirect("org_tasks", org_id=org_id)
+
+    if request.method == "POST":
+        task_id = request.POST.get("task_id")
+        task = get_object_or_404(Task, id=task_id, organization=org)
+        task.title = request.POST.get("title")
+        task.description = request.POST.get("description", "")
+        task.assigned_to = get_object_or_404(User, id=request.POST.get("assigned_to"))
+        task.status = request.POST.get("status")
+        task.due_date = request.POST.get("due_date") or None
+        task.save()
+        messages.success(request, f"Task '{task.title}' has been updated.")
+
+    return redirect("org_tasks", org_id=org_id)
+
+
+@login_required
+def delete_task(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not is_big_four(request.user, org):
+        messages.error(request, "You do not have permission to do this.")
+        return redirect("org_tasks", org_id=org_id)
+
+    if request.method == "POST":
+        task_id = request.POST.get("task_id")
+        task = get_object_or_404(Task, id=task_id, organization=org)
+        title = task.title
+        task.delete()
+        messages.success(request, f"Task '{title}' has been deleted.")
+
+    return redirect("org_tasks", org_id=org_id)
 
 
 def logout_user(request):

@@ -18,11 +18,33 @@
     </a>
   </div>
 </div>
+
 {% else %}
-<div class="p-8">
-  <h1 class="text-3xl font-bold mb-6">Tasks</h1>
-  <div class="bg-white p-6 rounded-lg shadow">
-    <p class="text-gray-600">Your tasks will appear here.</p>
+<div class="w-full p-8">
+  <h1 class="text-2xl font-semibold mb-6">Tasks</h1>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for org in organizations %}
+    <div class="bg-white p-5 rounded shadow-sm hover:shadow flex flex-col gap-3">
+      <div class="flex items-center gap-4">
+        {% if org.logo %}
+        <img src="{{ org.logo.url }}" alt="{{ org.name }} logo" class="w-14 h-14 rounded-full object-cover flex-shrink-0" />
+        {% else %}
+        <div class="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 text-2xl">🏢</div>
+        {% endif %}
+        <div>
+          <h2 class="font-semibold text-gray-800">{{ org.name }}</h2>
+          <p class="text-sm text-gray-400">{{ org.membership_set.count }} member{{ org.membership_set.count|pluralize }}</p>
+        </div>
+      </div>
+      {% if org.description %}
+      <p class="text-sm text-gray-500 line-clamp-2">{{ org.description }}</p>
+      {% endif %}
+      <a href="{% url 'org_tasks' org.id %}" class="mt-auto block text-center px-4 py-2 rounded bg-gray-900 text-white text-sm hover:bg-black">
+        View Tasks
+      </a>
+    </div>
+    {% endfor %}
   </div>
 </div>
 {% endif %}

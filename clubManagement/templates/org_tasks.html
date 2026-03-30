@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ org.name }} - Tasks{% endblock %}
+
+{% block content %}
+<div class="w-full max-w-4xl mx-auto p-8">
+
+  <a href="{% url 'tasks' %}" class="text-sm text-gray-500 hover:text-gray-800 mb-6 inline-block">&larr; Back to Tasks</a>
+
+  {% if messages %}
+  <div class="mb-4 space-y-2">
+    {% for message in messages %}
+    <div class="px-5 py-3 rounded text-sm text-white {% if message.tags == 'error' %}bg-red-500{% else %}bg-green-500{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- HEADER -->
+  <div class="bg-white rounded-lg shadow-sm p-6 mb-6 flex items-center gap-6">
+    {% if org.logo %}
+    <img src="{{ org.logo.url }}" alt="{{ org.name }} logo" class="w-20 h-20 rounded-full object-cover flex-shrink-0" />
+    {% else %}
+    <div class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center text-4xl flex-shrink-0">🏢</div>
+    {% endif %}
+    <div class="flex-1">
+      <h1 class="text-2xl font-bold text-gray-800">{{ org.name }}</h1>
+      <p class="text-sm text-gray-400 mt-1">{{ org.description }}</p>
+    </div>
+    {% if is_big_four %}
+    <button onclick="openAddTaskModal()" class="px-4 py-2 bg-gray-900 text-white rounded hover:bg-black text-sm flex-shrink-0">
+      + Add Task
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- TASKS LIST -->
+  {% if tasks %}
+  <div class="space-y-4">
+    {% for task in tasks %}
+    <div class="bg-white rounded-lg shadow-sm p-5 flex items-start justify-between gap-4">
+      <div class="flex-1">
+        <div class="flex items-center gap-2 mb-1">
+          <h3 class="font-semibold text-gray-800">{{ task.title }}</h3>
+          <span class="text-xs px-2 py-0.5 rounded-full
+            {% if task.status == 'DONE' %}bg-green-100 text-green-700
+            {% elif task.status == 'PROG' %}bg-blue-100 text-blue-700
+            {% else %}bg-gray-100 text-gray-600{% endif %}">
+            {{ task.get_status_display }}
+          </span>
+        </div>
+        {% if task.description %}
+        <p class="text-sm text-gray-500 mb-2">{{ task.description }}</p>
+        {% endif %}
+        <p class="text-xs text-gray-400">
+          Assigned to: <span class="font-medium text-gray-600">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</span>
+          {% if task.due_date %} &bull; Due: {{ task.due_date }}{% endif %}
+        </p>
+      </div>
+      {% if is_big_four %}
+      <div class="flex gap-2 flex-shrink-0">
+        <button onclick="openEditTaskModal('{{ task.id }}', '{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.id }}', '{{ task.status }}', '{{ task.due_date|default:'' }}')"
+          class="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">Edit</button>
+        <button onclick="openDeleteTaskModal('{{ task.id }}', '{{ task.title|escapejs }}')"
+          class="text-xs px-3 py-1 rounded border border-red-300 text-red-500 hover:bg-red-50">Delete</button>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="bg-white rounded-lg shadow-sm p-6 text-center text-gray-400">
+    <div class="text-4xl mb-3">📋</div>
+    <p class="text-lg font-medium text-gray-600">No tasks yet</p>
+    <p class="text-sm mt-1">
+      {% if is_big_four %}Click "+ Add Task" to create the first task.{% else %}Tasks assigned to you will show up here.{% endif %}
+    </p>
+  </div>
+  {% endif %}
+
+</div>
+
+{% if is_big_four %}
+<!-- ADD TASK MODAL -->
+<div id="addTaskModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-xl font-semibold text-gray-800">Add Task</h2>
+      <button onclick="closeAddTaskModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <form method="POST" action="{% url 'add_task' org.id %}" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Title <span class="text-red-500">*</span></label>
+        <input type="text" name="title" required placeholder="Task title"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <textarea name="description" rows="3" placeholder="What needs to be done?"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"></textarea>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Assign To <span class="text-red-500">*</span></label>
+        <select name="assigned_to" required class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+          <option value="">Select a member</option>
+          {% for membership in members %}
+          <option value="{{ membership.user.id }}">{{ membership.user.get_full_name|default:membership.user.username }} ({{ membership.get_role_display }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+        <input type="date" name="due_date"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400" />
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeAddTaskModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-gray-900 text-white rounded hover:bg-black">Add Task</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- EDIT TASK MODAL -->
+<div id="editTaskModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-xl font-semibold text-gray-800">Edit Task</h2>
+      <button onclick="closeEditTaskModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <form method="POST" action="{% url 'edit_task' org.id %}" class="space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="task_id" id="editTaskId" />
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Title <span class="text-red-500">*</span></label>
+        <input type="text" name="title" id="editTaskTitle" required
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <textarea name="description" id="editTaskDescription" rows="3"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"></textarea>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Assign To <span class="text-red-500">*</span></label>
+        <select name="assigned_to" id="editTaskAssignedTo" required class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+          {% for membership in members %}
+          <option value="{{ membership.user.id }}">{{ membership.user.get_full_name|default:membership.user.username }} ({{ membership.get_role_display }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+        <select name="status" id="editTaskStatus" class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+          <option value="TODO">To Do</option>
+          <option value="PROG">In Progress</option>
+          <option value="DONE">Done</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+        <input type="date" name="due_date" id="editTaskDueDate"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400" />
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeEditTaskModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-gray-900 text-white rounded hover:bg-black">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- DELETE TASK MODAL -->
+<div id="deleteTaskModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-800">Delete Task</h2>
+      <button onclick="closeDeleteTaskModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <p class="text-gray-500 mb-2">Are you sure you want to delete <span id="deleteTaskName" class="font-semibold text-gray-800"></span>?</p>
+    <p class="text-sm text-red-400 mb-6">This action cannot be undone.</p>
+    <form method="POST" action="{% url 'delete_task' org.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="task_id" id="deleteTaskId" />
+      <div class="flex justify-end gap-3">
+        <button type="button" onclick="closeDeleteTaskModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-red-500 text-white rounded hover:bg-red-600">Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openAddTaskModal() { document.getElementById('addTaskModal').classList.remove('hidden'); }
+  function closeAddTaskModal() { document.getElementById('addTaskModal').classList.add('hidden'); }
+
+  function openEditTaskModal(id, title, description, assignedTo, status, dueDate) {
+    document.getElementById('editTaskId').value = id;
+    document.getElementById('editTaskTitle').value = title;
+    document.getElementById('editTaskDescription').value = description;
+    document.getElementById('editTaskAssignedTo').value = assignedTo;
+    document.getElementById('editTaskStatus').value = status;
+    document.getElementById('editTaskDueDate').value = dueDate;
+    document.getElementById('editTaskModal').classList.remove('hidden');
+  }
+  function closeEditTaskModal() { document.getElementById('editTaskModal').classList.add('hidden'); }
+
+  function openDeleteTaskModal(id, title) {
+    document.getElementById('deleteTaskId').value = id;
+    document.getElementById('deleteTaskName').textContent = title;
+    document.getElementById('deleteTaskModal').classList.remove('hidden');
+  }
+  function closeDeleteTaskModal() { document.getElementById('deleteTaskModal').classList.add('hidden'); }
+
+  ['addTaskModal', 'editTaskModal', 'deleteTaskModal'].forEach(id => {
+    document.getElementById(id).addEventListener('click', function(e) {
+      if (e.target === this) this.classList.add('hidden');
+    });
+  });
+</script>
+{% endif %}
+{% endblock %}
