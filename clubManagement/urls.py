@@ -13,9 +13,12 @@ urlpatterns = [
     path('organizations/', views.organizations, name='organizations'),
     path('organizations/<int:org_id>/', views.organization_detail, name='organization_detail'),
     path('organizations/<int:org_id>/delete/', views.delete_organization, name='delete_organization'),
+    path('organizations/<int:org_id>/edit-member/', views.edit_member_role, name='edit_member_role'),
+    path('organizations/<int:org_id>/kick-member/', views.kick_member, name='kick_member'),
     path('tasks/', views.tasks, name='tasks'),
 
     path('create-org/', views.create_organization, name='create_organization'),
+    path('join-org/', views.join_organization, name='join_organization'),
     path('add-member/<int:org_id>/', views.add_member, name='add_member'),
     path('remove-member/<int:org_id>/<int:user_id>/', views.remove_member, name='remove_member'),
 

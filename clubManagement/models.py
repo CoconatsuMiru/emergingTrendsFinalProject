@@ -7,13 +7,12 @@ class Organization(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, default="")
     logo = models.ImageField(upload_to="org_logos/", blank=True, null=True)
-    has_vp = models.BooleanField(default=False)
+    has_two_vp = models.BooleanField(default=False)  # True = VPI + VPE, False = single VP
     invitation_code = models.CharField(max_length=8, unique=True, blank=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        # Auto-generate invitation code if not set
         if not self.invitation_code:
             self.invitation_code = uuid.uuid4().hex[:8].upper()
         super().save(*args, **kwargs)
@@ -25,11 +24,12 @@ class Organization(models.Model):
 class Membership(models.Model):
     ROLE_CHOICES = [
         ("PRES", "President"),
-        ("VPI", "Vice President Internal"),
-        ("VPE", "Vice President External"),
-        ("SEC", "Secretary"),
-        ("TRE", "Treasurer"),
-        ("MEM", "Member"),
+        ("VP",   "Vice President"),
+        ("VPI",  "Vice President Internal"),
+        ("VPE",  "Vice President External"),
+        ("SEC",  "Secretary"),
+        ("TRE",  "Treasurer"),
+        ("MEM",  "Member"),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
