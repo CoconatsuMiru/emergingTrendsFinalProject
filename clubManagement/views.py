@@ -4,7 +4,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
-from .models import Organization, Membership, Task
+from .models import Organization, Membership, Task, Department
 
 
 def index(request):
@@ -97,11 +97,21 @@ def organizations(request):
 @login_required
 def organization_detail(request, org_id):
     org = get_object_or_404(Organization, id=org_id)
-    members = Membership.objects.filter(organization=org).select_related("user")
+    members = Membership.objects.filter(organization=org).select_related("user", "department")
+    departments = Department.objects.filter(organization=org)
+    user_is_big_four = is_big_four(request.user, org)
+    user_is_president = is_president(request.user, org)
+
+    # Members with no department assigned (role=MEM only)
+    unassigned_members = members.filter(role="MEM", department__isnull=True)
+
     return render(request, "organization_detail.html", {
         "org": org,
         "members": members,
-        "is_president": is_president(request.user, org),
+        "departments": departments,
+        "unassigned_members": unassigned_members,
+        "is_president": user_is_president,
+        "is_big_four": user_is_big_four,
         "active_page": "organizations"
     })
 
@@ -164,6 +174,10 @@ def edit_member_role(request, org_id):
             messages.error(request, f"The {role_display} position is already assigned to another member.")
             return redirect("organization_detail", org_id=org_id)
 
+        # If promoted to executive, remove from department
+        if role != "MEM":
+            membership.department = None
+
         membership.role = role
         membership.save()
         messages.success(request, f"{membership.user.username}'s role updated to {dict(Membership.ROLE_CHOICES).get(role)}.")
@@ -189,6 +203,97 @@ def kick_member(request, org_id):
         username = membership.user.username
         membership.delete()
         messages.success(request, f"{username} has been removed from the organization.")
+
+    return redirect("organization_detail", org_id=org_id)
+
+
+@login_required
+def create_department(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not is_big_four(request.user, org):
+        messages.error(request, "You do not have permission to do this.")
+        return redirect("organization_detail", org_id=org_id)
+
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        description = request.POST.get("description", "").strip()
+
+        if not name:
+            messages.error(request, "Department name is required.")
+            return redirect("organization_detail", org_id=org_id)
+
+        Department.objects.create(organization=org, name=name, description=description)
+        messages.success(request, f"Department '{name}' has been created.")
+
+    return redirect("organization_detail", org_id=org_id)
+
+
+@login_required
+def delete_department(request, org_id, dept_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not is_big_four(request.user, org):
+        messages.error(request, "You do not have permission to do this.")
+        return redirect("organization_detail", org_id=org_id)
+
+    if request.method == "POST":
+        dept = get_object_or_404(Department, id=dept_id, organization=org)
+        dept.delete()
+        messages.success(request, f"Department '{dept.name}' has been deleted.")
+
+    return redirect("organization_detail", org_id=org_id)
+
+
+@login_required
+def assign_department(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not is_big_four(request.user, org):
+        messages.error(request, "You do not have permission to do this.")
+        return redirect("organization_detail", org_id=org_id)
+
+    if request.method == "POST":
+        membership_ids = request.POST.getlist("membership_ids")
+        dept_id = request.POST.get("department_id")
+        dept = get_object_or_404(Department, id=dept_id, organization=org)
+        count = 0
+        for membership_id in membership_ids:
+            try:
+                membership = Membership.objects.get(id=membership_id, organization=org, role="MEM")
+                membership.department = dept
+                membership.save()
+                count += 1
+            except Membership.DoesNotExist:
+                pass
+        if count > 0:
+            messages.success(request, f"{count} member{'s' if count > 1 else ''} assigned to {dept.name}.")
+        else:
+            messages.error(request, "No members were selected.")
+    return redirect("organization_detail", org_id=org_id)
+
+
+@login_required
+def remove_from_department(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not is_big_four(request.user, org):
+        messages.error(request, "You do not have permission to do this.")
+        return redirect("organization_detail", org_id=org_id)
+
+    if request.method == "POST":
+        membership_ids = request.POST.getlist("membership_ids")
+        if not membership_ids:
+            single = request.POST.get("membership_id")
+            if single:
+                membership_ids = [single]
+        count = 0
+        for mid in membership_ids:
+            try:
+                membership = Membership.objects.get(id=mid, organization=org)
+                membership.department = None
+                membership.save()
+                count += 1
+            except Membership.DoesNotExist:
+                pass
+        if count > 0:
+            messages.success(request, f"{count} member{{'s' if count > 1 else ''}} removed from their department.")
 
     return redirect("organization_detail", org_id=org_id)
 
@@ -244,7 +349,6 @@ def org_tasks(request, org_id):
     members = Membership.objects.filter(organization=org).select_related("user")
     user_is_big_four = is_big_four(request.user, org)
 
-    # Big four see all tasks, members only see their own
     if user_is_big_four:
         org_task_list = Task.objects.filter(organization=org).select_related("assigned_to")
     else:

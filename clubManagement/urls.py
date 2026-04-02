@@ -15,6 +15,10 @@ urlpatterns = [
     path('organizations/<int:org_id>/delete/', views.delete_organization, name='delete_organization'),
     path('organizations/<int:org_id>/edit-member/', views.edit_member_role, name='edit_member_role'),
     path('organizations/<int:org_id>/kick-member/', views.kick_member, name='kick_member'),
+    path('organizations/<int:org_id>/create-department/', views.create_department, name='create_department'),
+    path('organizations/<int:org_id>/delete-department/<int:dept_id>/', views.delete_department, name='delete_department'),
+    path('organizations/<int:org_id>/assign-department/', views.assign_department, name='assign_department'),
+    path('organizations/<int:org_id>/remove-from-department/', views.remove_from_department, name='remove_from_department'),
 
     path('tasks/', views.tasks, name='tasks'),
     path('tasks/<int:org_id>/', views.org_tasks, name='org_tasks'),

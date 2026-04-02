@@ -41,7 +41,7 @@
   </div>
 
   <!-- MEMBERS TABLE -->
-  <div class="bg-white rounded-lg shadow-sm p-6">
+  <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
     <h2 class="text-lg font-semibold text-gray-800 mb-4">Members</h2>
     <table class="w-full text-sm">
       <thead>
@@ -49,6 +49,7 @@
           <th class="pb-2 font-medium">Name</th>
           <th class="pb-2 font-medium">Username</th>
           <th class="pb-2 font-medium">Role</th>
+          <th class="pb-2 font-medium">Department</th>
           {% if is_president %}<th class="pb-2 font-medium text-right">Actions</th>{% endif %}
         </tr>
       </thead>
@@ -59,6 +60,15 @@
           <td class="py-3 text-gray-500">@{{ membership.user.username }}</td>
           <td class="py-3">
             <span class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">{{ membership.get_role_display }}</span>
+          </td>
+          <td class="py-3 text-gray-500 text-xs">
+            {% if membership.department %}
+              {{ membership.department.name }}
+            {% elif membership.role == 'MEM' %}
+              <span class="text-gray-300">Unassigned</span>
+            {% else %}
+              <span class="text-gray-300">—</span>
+            {% endif %}
           </td>
           {% if is_president %}
           <td class="py-3 text-right">
@@ -78,6 +88,48 @@
     </table>
   </div>
 
+  <!-- DEPARTMENTS SECTION -->
+  <div class="bg-white rounded-lg shadow-sm p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-semibold text-gray-800">Departments</h2>
+      {% if is_big_four %}
+      <button onclick="openCreateDeptModal()" class="px-4 py-2 bg-gray-900 text-white rounded hover:bg-black text-sm">
+        + Add Department
+      </button>
+      {% endif %}
+    </div>
+
+    {% if departments %}
+    <div class="flex flex-wrap gap-3">
+      {% for dept in departments %}
+      <div class="border border-gray-100 rounded-lg p-4 flex flex-col gap-3 w-80">
+        <div>
+          <h3 class="font-semibold text-gray-800">{{ dept.name }}</h3>
+          {% if dept.description %}
+          <p class="text-sm text-gray-500 mt-1 line-clamp-2">{{ dept.description }}</p>
+          {% endif %}
+        </div>
+        <div class="flex gap-2 mt-auto flex-wrap">
+          <button onclick="openViewDeptModal('{{ dept.id }}', '{{ dept.name|escapejs }}', '{{ dept.description|escapejs }}')"
+            class="text-sm px-4 py-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">View</button>
+          {% if is_big_four %}
+          <button onclick="openAddMembersModal('{{ dept.id }}', '{{ dept.name|escapejs }}')"
+            class="text-sm px-4 py-2 rounded bg-gray-900 text-white hover:bg-black whitespace-nowrap">+ Add</button>
+          <button onclick="openDeleteDeptModal('{{ dept.id }}', '{{ dept.name|escapejs }}')"
+            class="text-sm px-4 py-2 rounded border border-red-300 text-red-500 hover:bg-red-50">Delete</button>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <p class="text-sm text-gray-400 text-center py-4">
+      No departments yet.{% if is_big_four %} Click "+ Add Department" to create one.{% endif %}
+    </p>
+    {% endif %}
+  </div>
+
   {% if is_president %}
   <div class="flex justify-end mt-6">
     <button onclick="openDeleteModal()" class="px-5 py-2 bg-red-500 text-white rounded hover:bg-red-600">
@@ -87,6 +139,104 @@
   {% endif %}
 
 </div>
+
+<!-- VIEW DEPARTMENT MODAL -->
+<div id="viewDeptModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-800" id="viewDeptName"></h2>
+      <button onclick="closeViewDeptModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <p class="text-sm text-gray-500 mb-4" id="viewDeptDescription"></p>
+    <h3 class="text-sm font-medium text-gray-700 mb-2">Members</h3>
+    <div id="viewDeptMembers" class="space-y-2 max-h-60 overflow-y-auto"></div>
+    <div class="flex justify-between items-center mt-4">
+      <button id="removeSelectedBtn" onclick="removeSelectedMembers()"
+        class="hidden px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm">
+        Remove Selected
+      </button>
+      <button onclick="closeViewDeptModal()" class="ml-auto px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE DEPARTMENT MODAL -->
+{% if is_big_four %}
+<div id="createDeptModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-800">Add Department</h2>
+      <button onclick="closeCreateDeptModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <form method="POST" action="{% url 'create_department' org.id %}" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Department Name <span class="text-red-500">*</span></label>
+        <input type="text" name="name" required placeholder="e.g. Marketing"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <textarea name="description" rows="3" placeholder="What does this department do?"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"></textarea>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeCreateDeptModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-gray-900 text-white rounded hover:bg-black">Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ADD MEMBERS MODAL -->
+<div id="addMembersModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-800">Add Members to <span id="addMembersDeptName"></span></h2>
+      <button onclick="closeAddMembersModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <p class="text-sm text-gray-500 mb-4">Select multiple members to add at once.</p>
+    <form method="POST" action="{% url 'assign_department' org.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="department_id" id="addMembersDeptId" />
+      <div class="space-y-2 max-h-60 overflow-y-auto mb-4">
+        {% for membership in members %}
+        {% if membership.role == 'MEM' and not membership.department %}
+        <label class="flex items-center gap-3 p-2 rounded hover:bg-gray-50 cursor-pointer">
+          <input type="checkbox" name="membership_ids" value="{{ membership.id }}" class="accent-gray-900 w-4 h-4" />
+          <span class="text-sm text-gray-700">{{ membership.user.get_full_name|default:membership.user.username }}</span>
+          <span class="text-xs text-gray-400">@{{ membership.user.username }}</span>
+        </label>
+        {% endif %}
+        {% endfor %}
+      </div>
+      <div class="flex justify-end gap-3">
+        <button type="button" onclick="closeAddMembersModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-gray-900 text-white rounded hover:bg-black">Add Selected</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- DELETE DEPARTMENT MODAL -->
+<div id="deleteDeptModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-800">Delete Department</h2>
+      <button onclick="closeDeleteDeptModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <p class="text-gray-500 mb-2">Are you sure you want to delete <span id="deleteDeptName" class="font-semibold text-gray-800"></span>?</p>
+    <p class="text-sm text-red-400 mb-6">Members in this department will become unassigned.</p>
+    <form method="POST" id="deleteDeptForm" action="">
+      {% csrf_token %}
+      <div class="flex justify-end gap-3">
+        <button type="button" onclick="closeDeleteDeptModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-red-500 text-white rounded hover:bg-red-600">Delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
 
 {% if is_president %}
 <!-- EDIT ROLE MODAL -->
@@ -104,10 +254,10 @@
         <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
         <select name="role" id="editRoleSelect" class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
           {% if org.has_two_vp %}
-            <option value="VPI">Vice President Internal</option>
-            <option value="VPE">Vice President External</option>
+          <option value="VPI">Vice President Internal</option>
+          <option value="VPE">Vice President External</option>
           {% else %}
-            <option value="VP">Vice President</option>
+          <option value="VP">Vice President</option>
           {% endif %}
           <option value="SEC">Secretary</option>
           <option value="TRE">Treasurer</option>
@@ -160,8 +310,117 @@
     </div>
   </div>
 </div>
+{% endif %}
 
+<!-- Department members data for JS -->
 <script>
+  const isBigFour = {% if is_big_four %}true{% else %}false{% endif %};
+  const orgId = {{ org.id }};
+  const csrfToken = '{{ csrf_token }}';
+
+  const deptMembersData = {
+    {% for dept in departments %}
+    "{{ dept.id }}": {
+      members: [
+        {% for m in dept.members.all %}
+        { name: "{{ m.user.get_full_name|default:m.user.username }}", username: "@{{ m.user.username }}", membershipId: "{{ m.id }}" },
+        {% endfor %}
+      ]
+    },
+    {% endfor %}
+  };
+
+  function removeMemberFromDept(membershipId) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/organizations/${orgId}/remove-from-department/`;
+    form.innerHTML = `<input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                      <input type="hidden" name="membership_id" value="${membershipId}">`;
+    document.body.appendChild(form);
+    form.submit();
+  }
+
+  function openViewDeptModal(deptId, name, description) {
+    document.getElementById('viewDeptName').textContent = name;
+    document.getElementById('viewDeptDescription').textContent = description || 'No description provided.';
+    const container = document.getElementById('viewDeptMembers');
+    const removeSelectedBtn = document.getElementById('removeSelectedBtn');
+    container.innerHTML = '';
+    if (removeSelectedBtn) removeSelectedBtn.classList.add('hidden');
+    const data = deptMembersData[deptId];
+    if (data && data.members.length > 0) {
+      data.members.forEach(m => {
+        const checkbox = isBigFour
+          ? `<input type="checkbox" class="member-checkbox accent-gray-900 w-4 h-4 flex-shrink-0" data-membership-id="${m.membershipId}" onchange="updateRemoveBtn()" />`
+          : '';
+        container.innerHTML += `<div class="flex items-center gap-3 text-sm py-2 border-b last:border-0">
+          ${checkbox}
+          <span class="text-gray-800">${m.name}</span>
+          <span class="text-gray-400 text-xs">${m.username}</span>
+        </div>`;
+      });
+    } else {
+      container.innerHTML = '<p class="text-sm text-gray-400">No members in this department yet.</p>';
+    }
+    document.getElementById('viewDeptModal').classList.remove('hidden');
+  }
+  function closeViewDeptModal() {
+    document.getElementById('viewDeptModal').classList.add('hidden');
+    const removeSelectedBtn = document.getElementById('removeSelectedBtn');
+    if (removeSelectedBtn) removeSelectedBtn.classList.add('hidden');
+  }
+
+  function updateRemoveBtn() {
+    const checked = document.querySelectorAll('.member-checkbox:checked');
+    const btn = document.getElementById('removeSelectedBtn');
+    if (btn) {
+      if (checked.length > 0) btn.classList.remove('hidden');
+      else btn.classList.add('hidden');
+    }
+  }
+
+  function removeSelectedMembers() {
+    const checked = document.querySelectorAll('.member-checkbox:checked');
+    checked.forEach(cb => {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `/organizations/${orgId}/remove-from-department/`;
+      form.innerHTML = `<input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                        <input type="hidden" name="membership_id" value="${cb.dataset.membershipId}">`;
+      document.body.appendChild(form);
+    });
+    // Submit all forms sequentially - submit first, rest will be lost on redirect
+    // So we batch it differently - just remove one at a time via a single multi-submit
+    const membershipIds = Array.from(checked).map(cb => cb.dataset.membershipId);
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/organizations/${orgId}/remove-from-department/`;
+    let inputs = `<input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">`;
+    membershipIds.forEach(id => {
+      inputs += `<input type="hidden" name="membership_ids" value="${id}">`;
+    });
+    form.innerHTML = inputs;
+    document.body.appendChild(form);
+    form.submit();
+  }
+
+  function openCreateDeptModal() { document.getElementById('createDeptModal').classList.remove('hidden'); }
+  function closeCreateDeptModal() { document.getElementById('createDeptModal').classList.add('hidden'); }
+
+  function openAddMembersModal(deptId, name) {
+    document.getElementById('addMembersDeptId').value = deptId;
+    document.getElementById('addMembersDeptName').textContent = name;
+    document.getElementById('addMembersModal').classList.remove('hidden');
+  }
+  function closeAddMembersModal() { document.getElementById('addMembersModal').classList.add('hidden'); }
+
+  function openDeleteDeptModal(deptId, name) {
+    document.getElementById('deleteDeptName').textContent = name;
+    document.getElementById('deleteDeptForm').action = `/organizations/{{ org.id }}/delete-department/${deptId}/`;
+    document.getElementById('deleteDeptModal').classList.remove('hidden');
+  }
+  function closeDeleteDeptModal() { document.getElementById('deleteDeptModal').classList.add('hidden'); }
+
   function openEditModal(membershipId, name, currentRole) {
     document.getElementById('editMembershipId').value = membershipId;
     document.getElementById('editMemberName').textContent = name;
@@ -180,11 +439,9 @@
   function openDeleteModal() { document.getElementById('deleteModal').classList.remove('hidden'); }
   function closeDeleteModal() { document.getElementById('deleteModal').classList.add('hidden'); }
 
-  ['editModal', 'kickModal', 'deleteModal'].forEach(id => {
-    document.getElementById(id).addEventListener('click', function(e) {
-      if (e.target === this) this.classList.add('hidden');
-    });
+  ['viewDeptModal', 'createDeptModal', 'addMembersModal', 'deleteDeptModal', 'editModal', 'kickModal', 'deleteModal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', function(e) { if (e.target === this) this.classList.add('hidden'); });
   });
 </script>
-{% endif %}
 {% endblock %}

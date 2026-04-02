@@ -35,9 +35,26 @@ class Membership(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
     role = models.CharField(max_length=4, choices=ROLE_CHOICES, default="MEM")
+    department = models.ForeignKey(
+        'Department',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='members'
+    )
 
     def __str__(self):
         return f"{self.user.username} - {self.role}"
+
+
+class Department(models.Model):
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='departments')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.organization.name} - {self.name}"
 
 
 class Task(models.Model):
