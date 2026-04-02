@@ -222,6 +222,10 @@ def create_department(request, org_id):
             messages.error(request, "Department name is required.")
             return redirect("organization_detail", org_id=org_id)
 
+        if Department.objects.filter(organization=org, name__iexact=name).exists():
+            messages.error(request, f"A department named '{name}' already exists.")
+            return redirect("organization_detail", org_id=org_id)
+
         Department.objects.create(organization=org, name=name, description=description)
         messages.success(request, f"Department '{name}' has been created.")
 
