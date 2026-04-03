@@ -64,14 +64,26 @@ class Task(models.Model):
         ("DONE", "Done"),
     ]
 
+    PRIORITY_CHOICES = [
+        ("HIGH", "High"),
+        ("MED", "Medium"),
+        ("LOW", "Low"),
+    ]
+
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="tasks")
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
     assigned_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name="assigned_tasks")
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_tasks")
     status = models.CharField(max_length=4, choices=STATUS_CHOICES, default="TODO")
+    priority = models.CharField(max_length=4, choices=PRIORITY_CHOICES, default="MED")
     due_date = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def is_overdue(self):
+        from django.utils import timezone
+        return self.due_date and self.status != "DONE" and self.due_date < timezone.now().date()
 
     def __str__(self):
         return self.title

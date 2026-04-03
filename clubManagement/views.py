@@ -358,11 +358,18 @@ def org_tasks(request, org_id):
     else:
         org_task_list = Task.objects.filter(organization=org, assigned_to=request.user)
 
+    status_columns = [
+        ("TODO", "To Do", "bg-gray-400"),
+        ("PROG", "In Progress", "bg-blue-400"),
+        ("DONE", "Done", "bg-green-400"),
+    ]
+
     return render(request, "org_tasks.html", {
         "org": org,
         "tasks": org_task_list,
         "members": members,
         "is_big_four": user_is_big_four,
+        "status_columns": status_columns,
         "active_page": "tasks"
     })
 
@@ -379,6 +386,7 @@ def add_task(request, org_id):
         description = request.POST.get("description", "")
         assigned_to_id = request.POST.get("assigned_to")
         due_date = request.POST.get("due_date") or None
+        priority = request.POST.get("priority", "MED")
         assigned_to = get_object_or_404(User, id=assigned_to_id)
 
         Task.objects.create(
@@ -387,7 +395,8 @@ def add_task(request, org_id):
             description=description,
             assigned_to=assigned_to,
             created_by=request.user,
-            due_date=due_date
+            due_date=due_date,
+            priority=priority
         )
         messages.success(request, f"Task '{title}' has been added.")
 
@@ -408,6 +417,7 @@ def edit_task(request, org_id):
         task.description = request.POST.get("description", "")
         task.assigned_to = get_object_or_404(User, id=request.POST.get("assigned_to"))
         task.status = request.POST.get("status")
+        task.priority = request.POST.get("priority", "MED")
         task.due_date = request.POST.get("due_date") or None
         task.save()
         messages.success(request, f"Task '{task.title}' has been updated.")
@@ -435,3 +445,20 @@ def delete_task(request, org_id):
 def logout_user(request):
     logout(request)
     return redirect("login")
+
+
+@login_required
+def cycle_task_status(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not is_big_four(request.user, org):
+        messages.error(request, "You do not have permission to do this.")
+        return redirect("org_tasks", org_id=org_id)
+
+    if request.method == "POST":
+        task_id = request.POST.get("task_id")
+        task = get_object_or_404(Task, id=task_id, organization=org)
+        next_status = {"TODO": "PROG", "PROG": "DONE", "DONE": "TODO"}
+        task.status = next_status.get(task.status, "TODO")
+        task.save()
+
+    return redirect("org_tasks", org_id=org_id)

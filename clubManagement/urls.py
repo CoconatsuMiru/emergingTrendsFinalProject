@@ -25,6 +25,7 @@ urlpatterns = [
     path('tasks/<int:org_id>/add/', views.add_task, name='add_task'),
     path('tasks/<int:org_id>/edit/', views.edit_task, name='edit_task'),
     path('tasks/<int:org_id>/delete/', views.delete_task, name='delete_task'),
+    path('tasks/<int:org_id>/cycle/', views.cycle_task_status, name='cycle_task_status'),
 
     path('create-org/', views.create_organization, name='create_organization'),
     path('join-org/', views.join_organization, name='join_organization'),
