@@ -3,7 +3,7 @@
 {% block title %}{{ org.name }}{% endblock %}
 
 {% block content %}
-<div class="w-full max-w-4xl mx-auto p-8">
+<div class="w-full max-w-6xl mx-auto p-8">
 
   <a href="{% url 'organizations' %}" class="text-sm text-gray-500 hover:text-gray-800 mb-6 inline-block">&larr; Back to Organizations</a>
 
@@ -41,51 +41,116 @@
   </div>
 
   <!-- MEMBERS TABLE -->
-  <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Members</h2>
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="text-left text-gray-400 border-b">
-          <th class="pb-2 font-medium">Name</th>
-          <th class="pb-2 font-medium">Username</th>
-          <th class="pb-2 font-medium">Role</th>
-          <th class="pb-2 font-medium">Department</th>
-          {% if is_president %}<th class="pb-2 font-medium text-right">Actions</th>{% endif %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for membership in members %}
-        <tr class="border-b last:border-0">
-          <td class="py-3 text-gray-800">{{ membership.user.get_full_name|default:membership.user.username }}</td>
-          <td class="py-3 text-gray-500">@{{ membership.user.username }}</td>
-          <td class="py-3">
-            <span class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">{{ membership.get_role_display }}</span>
-          </td>
-          <td class="py-3 text-gray-500 text-xs">
-            {% if membership.department %}
-              {{ membership.department.name }}
-            {% elif membership.role == 'MEM' %}
-              <span class="text-gray-300">Unassigned</span>
-            {% else %}
-              <span class="text-gray-300">—</span>
+  <div class="bg-white rounded-lg shadow-sm mb-6 overflow-hidden">
+
+    <!-- EXECUTIVES DROPDOWN -->
+    <button onclick="toggleDept('executives-section')" class="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 text-left border-b border-gray-100">
+      <h2 class="text-lg font-semibold text-gray-800">Executives</h2>
+      <svg id="arrow-executives-section" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+      </svg>
+    </button>
+    <div id="executives-section" class="hidden px-6 py-4">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-400 border-b">
+            <th class="pb-2 font-medium">Name</th>
+            <th class="pb-2 font-medium">Username</th>
+            <th class="pb-2 font-medium">Role</th>
+            {% if is_president %}<th class="pb-2 font-medium text-right">Actions</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for membership in members %}
+          {% if membership.role != 'MEM' %}
+          <tr class="border-b last:border-0">
+            <td class="py-3 text-gray-800">{{ membership.user.get_full_name|default:membership.user.username }}</td>
+            <td class="py-3 text-gray-500">@{{ membership.user.username }}</td>
+            <td class="py-3">
+              <span class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">{{ membership.get_role_display }}</span>
+            </td>
+            {% if is_president %}
+            <td class="py-3 text-right">
+              {% if membership.role != 'PRES' %}
+              <button onclick="openEditModal('{{ membership.id }}', '{{ membership.user.get_full_name|default:membership.user.username }}', '{{ membership.role }}')"
+                class="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 mr-1">Edit Role</button>
+              <button onclick="openKickModal('{{ membership.id }}', '{{ membership.user.get_full_name|default:membership.user.username }}')"
+                class="text-xs px-3 py-1 rounded border border-red-300 text-red-500 hover:bg-red-50">Remove</button>
+              {% else %}
+              <span class="text-xs text-gray-300">—</span>
+              {% endif %}
+            </td>
             {% endif %}
-          </td>
-          {% if is_president %}
-          <td class="py-3 text-right">
-            {% if membership.role != 'PRES' %}
-            <button onclick="openEditModal('{{ membership.id }}', '{{ membership.user.get_full_name|default:membership.user.username }}', '{{ membership.role }}')"
-              class="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 mr-1">Edit Role</button>
-            <button onclick="openKickModal('{{ membership.id }}', '{{ membership.user.get_full_name|default:membership.user.username }}')"
-              class="text-xs px-3 py-1 rounded border border-red-300 text-red-500 hover:bg-red-50">Remove</button>
-            {% else %}
-            <span class="text-xs text-gray-300">—</span>
-            {% endif %}
-          </td>
+          </tr>
           {% endif %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- MEMBERS DROPDOWN -->
+    <button onclick="toggleDept('members-section')" class="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 text-left border-b border-gray-100">
+      <h2 class="text-lg font-semibold text-gray-800">Members</h2>
+      <svg id="arrow-members-section" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+      </svg>
+    </button>
+    <div id="members-section" class="hidden px-6 py-4">
+      <!-- SEARCH -->
+      <div class="mb-4">
+        <input type="text" id="memberSearch" onkeyup="filterMembers()" placeholder="Search members..."
+          class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" />
+      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-400 border-b">
+            <th class="pb-2 font-medium">Name</th>
+            <th class="pb-2 font-medium">Username</th>
+            <th class="pb-2 font-medium">Department</th>
+            {% if is_president %}<th class="pb-2 font-medium text-right">Actions</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody id="membersTableBody">
+          {% for membership in members %}
+          {% if membership.role == 'MEM' %}
+          <tr class="border-b last:border-0 member-row">
+            <td class="py-3 text-gray-800 member-name">{{ membership.user.get_full_name|default:membership.user.username }}</td>
+            <td class="py-3 text-gray-500 member-username">@{{ membership.user.username }}</td>
+            <td class="py-3 text-gray-500 text-xs">
+              {% if membership.department %}
+                {{ membership.department.name }}
+                {% if is_big_four %}
+                <form method="POST" action="{% url 'remove_from_department' org.id %}" class="inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="membership_id" value="{{ membership.id }}" />
+                  <button type="submit" class="ml-1 text-red-400 hover:text-red-600">&times;</button>
+                </form>
+                {% endif %}
+              {% else %}
+                <span class="text-gray-300">Unassigned</span>
+              {% endif %}
+            </td>
+            {% if is_president %}
+            <td class="py-3 text-right">
+              <button onclick="openEditModal('{{ membership.id }}', '{{ membership.user.get_full_name|default:membership.user.username }}', '{{ membership.role }}')"
+                class="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 mr-1">Edit Role</button>
+              <button onclick="openKickModal('{{ membership.id }}', '{{ membership.user.get_full_name|default:membership.user.username }}')"
+                class="text-xs px-3 py-1 rounded border border-red-300 text-red-500 hover:bg-red-50">Remove</button>
+            </td>
+            {% endif %}
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="mt-3 text-center">
+        <button id="showMoreBtn" onclick="toggleShowMore()" style="display:none;"
+          class="px-4 py-2 text-sm border rounded text-gray-600 hover:bg-gray-50">
+          Show more
+        </button>
+      </div>
+    </div>
+
   </div>
 
   <!-- DEPARTMENTS SECTION -->
@@ -100,24 +165,47 @@
     </div>
 
     {% if departments %}
-    <div class="flex flex-wrap gap-3">
+    <div class="space-y-2">
       {% for dept in departments %}
-      <div class="border border-gray-100 rounded-lg p-4 flex flex-col gap-3 w-80">
-        <div>
-          <h3 class="font-semibold text-gray-800">{{ dept.name }}</h3>
-          {% if dept.description %}
-          <p class="text-sm text-gray-500 mt-1 line-clamp-2">{{ dept.description }}</p>
+      <div class="border border-gray-100 rounded-lg overflow-hidden">
+        <!-- DROPDOWN HEADER -->
+        <button onclick="toggleDept('dept-{{ dept.id }}')" class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-left">
+          <div>
+            <span class="font-semibold text-gray-800">{{ dept.name }}</span>
+            {% if dept.description %}
+            <span class="text-sm text-gray-400 ml-2">— {{ dept.description }}</span>
+            {% endif %}
+          </div>
+          <svg id="arrow-dept-{{ dept.id }}" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <!-- DROPDOWN BODY -->
+        <div id="dept-{{ dept.id }}" class="hidden border-t border-gray-100 px-4 py-3">
+          {% if dept.members.all %}
+          <div class="flex flex-wrap gap-2 mb-3">
+            {% for m in dept.members.all %}
+            <span class="inline-flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1 text-sm whitespace-nowrap">
+              <span class="text-gray-800">{{ m.user.get_full_name|default:m.user.username }}</span>
+              <span class="text-gray-400 text-xs">@{{ m.user.username }}</span>
+            </span>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-sm text-gray-400 mb-3">No members yet.</p>
           {% endif %}
-        </div>
-        <div class="flex gap-2 mt-auto flex-wrap">
-          <button onclick="openViewDeptModal('{{ dept.id }}', '{{ dept.name|escapejs }}', '{{ dept.description|escapejs }}')"
-            class="text-sm px-4 py-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">View</button>
-          {% if is_big_four %}
-          <button onclick="openAddMembersModal('{{ dept.id }}', '{{ dept.name|escapejs }}')"
-            class="text-sm px-4 py-2 rounded bg-gray-900 text-white hover:bg-black whitespace-nowrap">+ Add</button>
-          <button onclick="openDeleteDeptModal('{{ dept.id }}', '{{ dept.name|escapejs }}')"
-            class="text-sm px-4 py-2 rounded border border-red-300 text-red-500 hover:bg-red-50">Delete</button>
-          {% endif %}
+
+          <div class="flex gap-2 flex-wrap pt-2 border-t border-gray-100">
+            {% if is_big_four %}
+            <button onclick="openAddMembersModal('{{ dept.id }}', '{{ dept.name|escapejs }}')"
+              class="text-sm px-4 py-2 rounded bg-gray-900 text-white hover:bg-black whitespace-nowrap">+ Add Members</button>
+            <button onclick="openRemoveMembersModal('{{ dept.id }}', '{{ dept.name|escapejs }}')"
+              class="text-sm px-4 py-2 rounded border border-gray-300 text-gray-600 hover:bg-gray-50 whitespace-nowrap">Remove Members</button>
+            <button onclick="openDeleteDeptModal('{{ dept.id }}', '{{ dept.name|escapejs }}')"
+              class="text-sm px-4 py-2 rounded border border-red-300 text-red-500 hover:bg-red-50">Delete</button>
+            {% endif %}
+          </div>
         </div>
       </div>
       {% endfor %}
@@ -199,7 +287,10 @@
     <form method="POST" action="{% url 'assign_department' org.id %}">
       {% csrf_token %}
       <input type="hidden" name="department_id" id="addMembersDeptId" />
-      <div class="space-y-2 max-h-60 overflow-y-auto mb-4">
+      <input type="text" id="addMembersSearch" onkeyup="filterModalList('addMembersSearch', 'addMembersList')"
+        placeholder="Search members..."
+        class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 mb-3" />
+      <div id="addMembersList" class="space-y-1 max-h-52 overflow-y-auto mb-4">
         {% for membership in members %}
         {% if membership.role == 'MEM' and not membership.department %}
         <label class="flex items-center gap-3 p-2 rounded hover:bg-gray-50 cursor-pointer">
@@ -213,6 +304,29 @@
       <div class="flex justify-end gap-3">
         <button type="button" onclick="closeAddMembersModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
         <button type="submit" class="px-5 py-2 bg-gray-900 text-white rounded hover:bg-black">Add Selected</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- REMOVE MEMBERS MODAL -->
+<div id="removeMembersModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-800">Remove Members from <span id="removeMembersDeptName"></span></h2>
+      <button onclick="closeRemoveMembersModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <p class="text-sm text-gray-500 mb-4">Select members to remove from this department.</p>
+    <form method="POST" action="{% url 'remove_from_department' org.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="department_id" id="removeMembersDeptId" />
+      <input type="text" id="removeMembersSearch" onkeyup="filterModalList('removeMembersSearch', 'removeMembersList')"
+        placeholder="Search members..."
+        class="w-full border border-gray-300 rounded px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 mb-3" />
+      <div id="removeMembersList" class="space-y-1 max-h-52 overflow-y-auto mb-4"></div>
+      <div class="flex justify-end gap-3">
+        <button type="button" onclick="closeRemoveMembersModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-red-500 text-white rounded hover:bg-red-600">Remove Selected</button>
       </div>
     </form>
   </div>
@@ -404,6 +518,99 @@
     form.submit();
   }
 
+  function toggleDept(id) {
+    const body = document.getElementById(id);
+    const arrow = document.getElementById('arrow-' + id);
+    body.classList.toggle('hidden');
+    if (arrow) arrow.classList.toggle('rotate-180');
+    if (id === 'members-section' && !body.classList.contains('hidden')) {
+      initMemberRows();
+    }
+  }
+
+  function openRemoveMembersModal(deptId, name) {
+    document.getElementById('removeMembersDeptId').value = deptId;
+    document.getElementById('removeMembersDeptName').textContent = name;
+    const container = document.getElementById('removeMembersList');
+    container.innerHTML = '';
+    const data = deptMembersData[deptId];
+    if (data && data.members.length > 0) {
+      data.members.forEach(m => {
+        container.innerHTML += `<label class="flex items-center gap-3 p-2 rounded hover:bg-gray-50 cursor-pointer">
+          <input type="checkbox" name="membership_ids" value="${m.membershipId}" class="accent-gray-900 w-4 h-4" />
+          <span class="text-sm text-gray-700">${m.name}</span>
+          <span class="text-xs text-gray-400">@${m.username.replace('@','')}</span>
+        </label>`;
+      });
+    } else {
+      container.innerHTML = '<p class="text-sm text-gray-400">No members in this department.</p>';
+    }
+    document.getElementById('removeMembersModal').classList.remove('hidden');
+  }
+  function closeRemoveMembersModal() {
+    document.getElementById('removeMembersModal').classList.add('hidden');
+    document.getElementById('removeMembersSearch').value = '';
+  }
+
+  const MEMBERS_LIMIT = 8;
+  let showingAll = false;
+
+  function initMemberRows() {
+    const rows = document.querySelectorAll('.member-row');
+    rows.forEach((row, i) => {
+      row.dataset.index = i;
+      if (i >= MEMBERS_LIMIT) row.classList.add('member-hidden');
+    });
+    updateShowMoreBtn();
+  }
+
+  function updateShowMoreBtn() {
+    const total = document.querySelectorAll('.member-row').length;
+    const btn = document.getElementById('showMoreBtn');
+    const searching = document.getElementById('memberSearch').value.trim() !== '';
+    if (btn) btn.style.display = (total > MEMBERS_LIMIT && !searching) ? 'block' : 'none';
+    if (btn) btn.textContent = showingAll ? 'Show less' : `Show ${total - MEMBERS_LIMIT} more`;
+  }
+
+  function toggleShowMore() {
+    showingAll = !showingAll;
+    document.querySelectorAll('.member-row.member-hidden, .member-row').forEach((row, i) => {
+      if (row.dataset.index >= MEMBERS_LIMIT) {
+        row.style.display = showingAll ? '' : 'none';
+      }
+    });
+    document.querySelectorAll('.member-row').forEach(row => {
+      if (parseInt(row.dataset.index) >= MEMBERS_LIMIT) {
+        row.style.display = showingAll ? '' : 'none';
+      }
+    });
+    updateShowMoreBtn();
+  }
+
+  function filterMembers() {
+    const query = document.getElementById('memberSearch').value.toLowerCase();
+    const searching = query.trim() !== '';
+    document.querySelectorAll('.member-row').forEach(row => {
+      const name = row.querySelector('.member-name').textContent.toLowerCase();
+      const username = row.querySelector('.member-username').textContent.toLowerCase();
+      if (searching) {
+        row.style.display = (name.includes(query) || username.includes(query)) ? '' : 'none';
+      } else {
+        const idx = parseInt(row.dataset.index);
+        row.style.display = (showingAll || idx < MEMBERS_LIMIT) ? '' : 'none';
+      }
+    });
+    updateShowMoreBtn();
+  }
+
+  function filterModalList(searchId, listId) {
+    const query = document.getElementById(searchId).value.toLowerCase();
+    document.querySelectorAll(`#${listId} label`).forEach(label => {
+      const text = label.textContent.toLowerCase();
+      label.style.display = text.includes(query) ? '' : 'none';
+    });
+  }
+
   function openCreateDeptModal() { document.getElementById('createDeptModal').classList.remove('hidden'); }
   function closeCreateDeptModal() { document.getElementById('createDeptModal').classList.add('hidden'); }
 
@@ -412,7 +619,11 @@
     document.getElementById('addMembersDeptName').textContent = name;
     document.getElementById('addMembersModal').classList.remove('hidden');
   }
-  function closeAddMembersModal() { document.getElementById('addMembersModal').classList.add('hidden'); }
+  function closeAddMembersModal() {
+    document.getElementById('addMembersModal').classList.add('hidden');
+    document.getElementById('addMembersSearch').value = '';
+    filterModalList('addMembersSearch', 'addMembersList');
+  }
 
   function openDeleteDeptModal(deptId, name) {
     document.getElementById('deleteDeptName').textContent = name;
@@ -439,7 +650,7 @@
   function openDeleteModal() { document.getElementById('deleteModal').classList.remove('hidden'); }
   function closeDeleteModal() { document.getElementById('deleteModal').classList.add('hidden'); }
 
-  ['viewDeptModal', 'createDeptModal', 'addMembersModal', 'deleteDeptModal', 'editModal', 'kickModal', 'deleteModal'].forEach(id => {
+  ['viewDeptModal', 'createDeptModal', 'addMembersModal', 'removeMembersModal', 'deleteDeptModal', 'editModal', 'kickModal', 'deleteModal'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', function(e) { if (e.target === this) this.classList.add('hidden'); });
   });
