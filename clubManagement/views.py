@@ -364,10 +364,20 @@ def org_tasks(request, org_id):
         ("DONE", "Done", "bg-green-400"),
     ]
 
+    departments = Department.objects.filter(organization=org)
+
+    # Annotate each task with the assigned member's department name
+    for task in org_task_list:
+        membership = Membership.objects.filter(
+            user=task.assigned_to, organization=org
+        ).first()
+        task.assigned_to_dept = membership.department.name if membership and membership.department else None
+
     return render(request, "org_tasks.html", {
         "org": org,
         "tasks": org_task_list,
         "members": members,
+        "departments": departments,
         "is_big_four": user_is_big_four,
         "status_columns": status_columns,
         "active_page": "tasks"

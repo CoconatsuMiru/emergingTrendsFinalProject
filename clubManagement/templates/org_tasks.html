@@ -27,17 +27,10 @@
     <div class="flex-1">
       <h1 class="text-2xl font-bold text-gray-800">{{ org.name }}</h1>
       <p class="text-sm text-gray-400 mt-1">{{ org.description }}</p>
-      <!-- TASK COUNTERS -->
       <div class="flex gap-4 mt-3">
-        <span class="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-600">
-          📋 To Do: <strong id="count-todo">0</strong>
-        </span>
-        <span class="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-600">
-          ⚙️ In Progress: <strong id="count-prog">0</strong>
-        </span>
-        <span class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-600">
-          ✅ Done: <strong id="count-done">0</strong>
-        </span>
+        <span class="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-600">📋 To Do: <strong id="count-todo">0</strong></span>
+        <span class="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-600">⚙️ In Progress: <strong id="count-prog">0</strong></span>
+        <span class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-600">✅ Done: <strong id="count-done">0</strong></span>
       </div>
     </div>
     {% if is_big_four %}
@@ -48,7 +41,7 @@
   </div>
 
   <!-- FILTERS & SEARCH -->
-  <div class="flex flex-wrap gap-3 mb-6 items-center">
+  <div class="flex flex-wrap gap-3 mb-4 items-center">
     <input type="text" id="taskSearch" onkeyup="applyFilters()" placeholder="Search tasks..."
       class="border border-gray-300 rounded px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 w-56" />
     <select id="filterStatus" onchange="applyFilters()" class="border border-gray-300 rounded px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400">
@@ -74,141 +67,161 @@
     </button>
   </div>
 
-  <!-- KANBAN VIEW -->
-  <div id="kanbanView" class="hidden">
+  <!-- KANBAN VIEW (default) -->
+  <div id="kanbanView">
     <div class="grid grid-cols-3 gap-6">
-      {% for status, label, color in status_columns %}
-      <div class="bg-white rounded-lg shadow-sm p-4">
-        <h3 class="font-semibold text-gray-700 mb-4 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full {{ color }}"></span>
-          {{ label }}
-          <span class="ml-auto text-xs text-gray-400 kanban-count" data-status="{{ status }}">0</span>
-        </h3>
-        <div class="space-y-3 kanban-col" id="kanban-{{ status }}">
+      {% for status_key, status_label, dot_color in status_columns %}
+      <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <!-- COLUMN HEADER -->
+        <button onclick="toggleSection('kanban-section-{{ status_key }}')"
+          class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-left border-b border-gray-100">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full {{ dot_color }}"></span>
+            <h3 class="font-semibold text-gray-800 text-sm">{{ status_label }}</h3>
+            <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full" id="kanban-count-{{ status_key }}">0</span>
+          </div>
+          <svg id="arrow-kanban-section-{{ status_key }}" xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4 text-gray-400 transition-transform duration-200"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <!-- COLUMN BODY -->
+        <div id="kanban-section-{{ status_key }}" class="divide-y divide-gray-50">
           {% for task in tasks %}
-          {% if task.status == status %}
-          <div class="task-card border border-gray-100 rounded-lg p-3 cursor-pointer hover:shadow-sm
-            {% if task.is_overdue %}border-l-4 border-l-red-400{% endif %}"
+          {% if task.status == status_key %}
+          <div class="kanban-task-row px-4 py-3 hover:bg-gray-50 {% if task.is_overdue %}border-l-4 border-l-red-400{% endif %}"
+            data-id="{{ task.id }}"
             data-status="{{ task.status }}"
             data-priority="{{ task.priority }}"
             data-title="{{ task.title|lower }}"
             data-assignee="{{ task.assigned_to.get_full_name|default:task.assigned_to.username|lower }}"
             data-due="{{ task.due_date|date:'Y-m-d'|default:'' }}"
             data-created="{{ task.created_at|date:'Y-m-d' }}">
-            <div class="flex items-start justify-between gap-2 mb-2">
-              <p class="font-medium text-gray-800 text-sm">{{ task.title }}</p>
-              <span class="priority-badge text-xs px-2 py-0.5 rounded-full flex-shrink-0
-                {% if task.priority == 'HIGH' %}bg-red-100 text-red-600
-                {% elif task.priority == 'MED' %}bg-yellow-100 text-yellow-600
-                {% else %}bg-green-100 text-green-600{% endif %}">
-                {{ task.get_priority_display }}
-              </span>
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-800 truncate">{{ task.title }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</p>
+              </div>
+              <div class="flex items-center gap-1 flex-shrink-0">
+                <span class="text-xs px-1.5 py-0.5 rounded-full
+                  {% if task.priority == 'HIGH' %}bg-red-100 text-red-600
+                  {% elif task.priority == 'MED' %}bg-yellow-100 text-yellow-600
+                  {% else %}bg-green-100 text-green-600{% endif %}">
+                  {{ task.get_priority_display }}
+                </span>
+                {% if task.is_overdue %}<span class="text-xs text-red-500">⚠️</span>{% endif %}
+              </div>
             </div>
-            {% if task.description %}
-            <p class="text-xs text-gray-500 mb-2 line-clamp-2">{{ task.description }}</p>
+            {% if task.due_date %}
+            <p class="text-xs mt-1 {% if task.is_overdue %}text-red-400{% else %}text-gray-400{% endif %}">Due: {{ task.due_date }}</p>
             {% endif %}
-            <div class="flex items-center justify-between mt-2">
-              <p class="text-xs text-gray-400">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</p>
-              {% if task.due_date %}
-              <span class="text-xs {% if task.is_overdue %}text-red-500 font-medium{% else %}text-gray-400{% endif %}">
-                {% if task.is_overdue %}⚠️ {% endif %}{{ task.due_date }}
-              </span>
-              {% endif %}
-            </div>
             {% if is_big_four %}
-            <div class="flex gap-1 mt-2 pt-2 border-t border-gray-100">
-              <!-- STATUS CYCLE -->
+            <div class="flex gap-1 mt-2">
               <button onclick="cycleStatus({{ task.id }}, '{{ task.status }}')"
-                class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 flex-1">
-                ↻ Status
-              </button>
+                class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 hover:bg-gray-200">↻</button>
               <button onclick="openEditTaskModal('{{ task.id }}', '{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.id }}', '{{ task.status }}', '{{ task.due_date|default:'' }}', '{{ task.priority }}')"
-                class="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">Edit</button>
+                class="text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">Edit</button>
               <button onclick="openDeleteTaskModal('{{ task.id }}', '{{ task.title|escapejs }}')"
-                class="text-xs px-2 py-1 rounded border border-red-300 text-red-500 hover:bg-red-50">Del</button>
+                class="text-xs px-2 py-0.5 rounded border border-red-300 text-red-500 hover:bg-red-50">Del</button>
             </div>
             {% endif %}
           </div>
           {% endif %}
           {% endfor %}
+          <div class="kanban-empty px-4 py-3 text-xs text-gray-400 text-center hidden">No tasks.</div>
         </div>
       </div>
       {% endfor %}
     </div>
   </div>
 
-  <!-- LIST VIEW -->
-  <div id="listView">
-    {% if tasks %}
-    <div class="space-y-3" id="taskList">
-      {% for task in tasks %}
-      <div class="task-card bg-white rounded-lg shadow-sm p-5 flex items-start justify-between gap-4
-        {% if task.is_overdue %}border-l-4 border-l-red-400{% endif %}"
-        data-status="{{ task.status }}"
-        data-priority="{{ task.priority }}"
-        data-title="{{ task.title|lower }}"
-        data-assignee="{{ task.assigned_to.get_full_name|default:task.assigned_to.username|lower }}"
-        data-due="{{ task.due_date|date:'Y-m-d'|default:'' }}"
-        data-created="{{ task.created_at|date:'Y-m-d' }}">
-        <div class="flex-1">
-          <div class="flex items-center gap-2 mb-1 flex-wrap">
-            <h3 class="font-semibold text-gray-800">{{ task.title }}</h3>
-            <!-- CLICKABLE STATUS BADGE -->
-            {% if is_big_four %}
-            <button onclick="cycleStatus({{ task.id }}, '{{ task.status }}')"
-              class="text-xs px-2 py-0.5 rounded-full cursor-pointer hover:opacity-80 transition-opacity
-              {% if task.status == 'DONE' %}bg-green-100 text-green-700
-              {% elif task.status == 'PROG' %}bg-blue-100 text-blue-700
-              {% else %}bg-gray-100 text-gray-600{% endif %}">
-              {{ task.get_status_display }} ↻
-            </button>
-            {% else %}
-            <span class="text-xs px-2 py-0.5 rounded-full
-              {% if task.status == 'DONE' %}bg-green-100 text-green-700
-              {% elif task.status == 'PROG' %}bg-blue-100 text-blue-700
-              {% else %}bg-gray-100 text-gray-600{% endif %}">
-              {{ task.get_status_display }}
-            </span>
-            {% endif %}
-            <!-- PRIORITY BADGE -->
-            <span class="text-xs px-2 py-0.5 rounded-full
-              {% if task.priority == 'HIGH' %}bg-red-100 text-red-600
-              {% elif task.priority == 'MED' %}bg-yellow-100 text-yellow-600
-              {% else %}bg-green-100 text-green-600{% endif %}">
-              {{ task.get_priority_display }}
-            </span>
-            {% if task.is_overdue %}
-            <span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">⚠️ Overdue</span>
-            {% endif %}
+  <!-- LIST VIEW (hidden by default) -->
+  <div id="listView" class="hidden">
+    {% for status_key, status_label, dot_color in status_columns %}
+    <div class="bg-white rounded-lg shadow-sm mb-4 overflow-hidden list-section" data-status="{{ status_key }}">
+      <button onclick="toggleSection('list-section-{{ status_key }}')"
+        class="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 text-left">
+        <div class="flex items-center gap-3">
+          <span class="w-2.5 h-2.5 rounded-full {{ dot_color }}"></span>
+          <h3 class="font-semibold text-gray-800">{{ status_label }}</h3>
+          <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full" id="list-count-{{ status_key }}">0</span>
+        </div>
+        <svg id="arrow-list-section-{{ status_key }}" xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4 text-gray-400 transition-transform duration-200"
+          fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <div id="list-section-{{ status_key }}" class="border-t border-gray-100">
+        <div class="grid grid-cols-12 gap-4 px-6 py-2 text-xs font-medium text-gray-400 border-b border-gray-100 bg-gray-50">
+          <div class="col-span-3">Task</div>
+          <div class="col-span-2">Assigned To</div>
+          <div class="col-span-2">Department</div>
+          <div class="col-span-1">Priority</div>
+          <div class="col-span-2">Due Date</div>
+          <div class="col-span-2 text-right">{% if is_big_four %}Actions{% endif %}</div>
+        </div>
+
+        <div class="list-row-container" id="list-rows-{{ status_key }}">
+          {% for task in tasks %}
+          {% if task.status == status_key %}
+          <div class="list-task-row grid grid-cols-12 gap-4 px-6 py-3 border-b border-gray-50 hover:bg-gray-50 items-center
+            {% if task.is_overdue %}border-l-4 border-l-red-400{% endif %}"
+            data-id="{{ task.id }}"
+            data-status="{{ task.status }}"
+            data-priority="{{ task.priority }}"
+            data-title="{{ task.title|lower }}"
+            data-assignee="{{ task.assigned_to.get_full_name|default:task.assigned_to.username|lower }}"
+            data-due="{{ task.due_date|date:'Y-m-d'|default:'' }}"
+            data-created="{{ task.created_at|date:'Y-m-d' }}">
+            <div class="col-span-3">
+              <p class="font-medium text-gray-800 text-sm">{{ task.title }}</p>
+              {% if task.description %}<p class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ task.description }}</p>{% endif %}
+              {% if task.is_overdue %}<span class="text-xs text-red-500">⚠️ Overdue</span>{% endif %}
+            </div>
+            <div class="col-span-2">
+              <p class="text-sm text-gray-700">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</p>
+              <p class="text-xs text-gray-400">@{{ task.assigned_to.username }}</p>
+            </div>
+            <div class="col-span-2">
+              {% if task.assigned_to_dept %}
+              <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{{ task.assigned_to_dept }}</span>
+              {% else %}<span class="text-xs text-gray-300">—</span>{% endif %}
+            </div>
+            <div class="col-span-1">
+              <span class="text-xs px-2 py-0.5 rounded-full
+                {% if task.priority == 'HIGH' %}bg-red-100 text-red-600
+                {% elif task.priority == 'MED' %}bg-yellow-100 text-yellow-600
+                {% else %}bg-green-100 text-green-600{% endif %}">
+                {{ task.get_priority_display }}
+              </span>
+            </div>
+            <div class="col-span-2">
+              {% if task.due_date %}
+              <span class="text-sm {% if task.is_overdue %}text-red-500 font-medium{% else %}text-gray-600{% endif %}">{{ task.due_date }}</span>
+              {% else %}<span class="text-xs text-gray-300">No due date</span>{% endif %}
+            </div>
+            <div class="col-span-2 flex gap-1 justify-end">
+              {% if is_big_four %}
+              <button onclick="cycleStatus({{ task.id }}, '{{ task.status }}')"
+                class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200">↻</button>
+              <button onclick="openEditTaskModal('{{ task.id }}', '{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.id }}', '{{ task.status }}', '{{ task.due_date|default:'' }}', '{{ task.priority }}')"
+                class="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">Edit</button>
+              <button onclick="openDeleteTaskModal('{{ task.id }}', '{{ task.title|escapejs }}')"
+                class="text-xs px-2 py-1 rounded border border-red-300 text-red-500 hover:bg-red-50">Del</button>
+              {% endif %}
+            </div>
           </div>
-          {% if task.description %}
-          <p class="text-sm text-gray-500 mb-2">{{ task.description }}</p>
           {% endif %}
-          <p class="text-xs text-gray-400">
-            Assigned to: <span class="font-medium text-gray-600">{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</span>
-            {% if task.due_date %} &bull; Due: <span class="{% if task.is_overdue %}text-red-500 font-medium{% endif %}">{{ task.due_date }}</span>{% endif %}
-          </p>
+          {% endfor %}
         </div>
-        {% if is_big_four %}
-        <div class="flex gap-2 flex-shrink-0">
-          <button onclick="openEditTaskModal('{{ task.id }}', '{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.id }}', '{{ task.status }}', '{{ task.due_date|default:'' }}', '{{ task.priority }}')"
-            class="text-xs px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">Edit</button>
-          <button onclick="openDeleteTaskModal('{{ task.id }}', '{{ task.title|escapejs }}')"
-            class="text-xs px-3 py-1 rounded border border-red-300 text-red-500 hover:bg-red-50">Delete</button>
-        </div>
-        {% endif %}
+        <div class="list-empty px-6 py-4 text-sm text-gray-400 text-center hidden">No tasks here.</div>
       </div>
-      {% endfor %}
     </div>
-    {% else %}
-    <div class="bg-white rounded-lg shadow-sm p-6 text-center text-gray-400">
-      <div class="text-4xl mb-3">📋</div>
-      <p class="text-lg font-medium text-gray-600">No tasks yet</p>
-      <p class="text-sm mt-1">
-        {% if is_big_four %}Click "+ Add Task" to create the first task.{% else %}Tasks assigned to you will show up here.{% endif %}
-      </p>
-    </div>
-    {% endif %}
+    {% endfor %}
   </div>
 
 </div>
@@ -234,11 +247,22 @@
           class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"></textarea>
       </div>
       <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Department</label>
+        <select id="addDeptFilter" onchange="filterAssignTo('addDeptFilter', 'addAssignTo')"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400 mb-2">
+          <option value="">All Members</option>
+          <option value="__exec__">Executives Only</option>
+          {% for dept in departments %}<option value="{{ dept.id }}">{{ dept.name }}</option>{% endfor %}
+        </select>
         <label class="block text-sm font-medium text-gray-700 mb-1">Assign To <span class="text-red-500">*</span></label>
-        <select name="assigned_to" required class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+        <select name="assigned_to" id="addAssignTo" required class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
           <option value="">Select a member</option>
           {% for membership in members %}
-          <option value="{{ membership.user.id }}">{{ membership.user.get_full_name|default:membership.user.username }} ({{ membership.get_role_display }})</option>
+          {% if membership.role != 'MEM' %}
+          <option value="{{ membership.user.id }}" data-dept="__exec__">{{ membership.user.get_full_name|default:membership.user.username }} ({{ membership.get_role_display }})</option>
+          {% else %}
+          <option value="{{ membership.user.id }}" data-dept="{{ membership.department.id|default:'' }}">{{ membership.user.get_full_name|default:membership.user.username }} ({{ membership.get_role_display }}{% if membership.department %} - {{ membership.department.name }}{% endif %})</option>
+          {% endif %}
           {% endfor %}
         </select>
       </div>
@@ -246,15 +270,12 @@
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
           <select name="priority" class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
-            <option value="MED">Medium</option>
-            <option value="HIGH">High</option>
-            <option value="LOW">Low</option>
+            <option value="MED">Medium</option><option value="HIGH">High</option><option value="LOW">Low</option>
           </select>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-          <input type="date" name="due_date"
-            class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400" />
+          <input type="date" name="due_date" class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400" />
         </div>
       </div>
       <div class="flex justify-end gap-3 pt-2">
@@ -286,10 +307,21 @@
           class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"></textarea>
       </div>
       <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Department</label>
+        <select id="editDeptFilter" onchange="filterAssignTo('editDeptFilter', 'editTaskAssignedTo')"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400 mb-2">
+          <option value="">All Members</option>
+          <option value="__exec__">Executives Only</option>
+          {% for dept in departments %}<option value="{{ dept.id }}">{{ dept.name }}</option>{% endfor %}
+        </select>
         <label class="block text-sm font-medium text-gray-700 mb-1">Assign To <span class="text-red-500">*</span></label>
         <select name="assigned_to" id="editTaskAssignedTo" required class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
           {% for membership in members %}
-          <option value="{{ membership.user.id }}">{{ membership.user.get_full_name|default:membership.user.username }} ({{ membership.get_role_display }})</option>
+          {% if membership.role != 'MEM' %}
+          <option value="{{ membership.user.id }}" data-dept="__exec__">{{ membership.user.get_full_name|default:membership.user.username }} ({{ membership.get_role_display }})</option>
+          {% else %}
+          <option value="{{ membership.user.id }}" data-dept="{{ membership.department.id|default:'' }}">{{ membership.user.get_full_name|default:membership.user.username }} ({{ membership.get_role_display }}{% if membership.department %} - {{ membership.department.name }}{% endif %})</option>
+          {% endif %}
           {% endfor %}
         </select>
       </div>
@@ -297,17 +329,13 @@
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
           <select name="status" id="editTaskStatus" class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
-            <option value="TODO">To Do</option>
-            <option value="PROG">In Progress</option>
-            <option value="DONE">Done</option>
+            <option value="TODO">To Do</option><option value="PROG">In Progress</option><option value="DONE">Done</option>
           </select>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
           <select name="priority" id="editTaskPriority" class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
-            <option value="MED">Medium</option>
-            <option value="HIGH">High</option>
-            <option value="LOW">Low</option>
+            <option value="MED">Medium</option><option value="HIGH">High</option><option value="LOW">Low</option>
           </select>
         </div>
         <div>
@@ -345,41 +373,27 @@
 </div>
 {% endif %}
 
-<!-- CYCLE STATUS FORM (hidden) -->
 <form id="cycleStatusForm" method="POST" action="{% url 'cycle_task_status' org.id %}" style="display:none;">
   {% csrf_token %}
   <input type="hidden" name="task_id" id="cycleTaskId" />
 </form>
 
 <script>
-  let isKanban = false;
+  let isKanban = true;
 
   function toggleView() {
     isKanban = !isKanban;
     document.getElementById('kanbanView').classList.toggle('hidden', !isKanban);
     document.getElementById('listView').classList.toggle('hidden', isKanban);
     document.getElementById('viewToggleBtn').textContent = isKanban ? '📋 List View' : '🗂 Kanban View';
+    applyFilters();
   }
 
-  function updateCounts() {
-    const cards = document.querySelectorAll('.task-card:not([style*="display: none"])');
-    let todo = 0, prog = 0, done = 0;
-    cards.forEach(c => {
-      const s = c.dataset.status;
-      if (s === 'TODO') todo++;
-      else if (s === 'PROG') prog++;
-      else if (s === 'DONE') done++;
-    });
-    document.getElementById('count-todo').textContent = todo;
-    document.getElementById('count-prog').textContent = prog;
-    document.getElementById('count-done').textContent = done;
-
-    // Update kanban counts
-    document.querySelectorAll('.kanban-count').forEach(el => {
-      const status = el.dataset.status;
-      const count = document.querySelectorAll(`#kanban-${status} .task-card`).length;
-      el.textContent = count;
-    });
+  function toggleSection(id) {
+    const body = document.getElementById(id);
+    const arrow = document.getElementById('arrow-' + id);
+    if (body) body.classList.toggle('hidden');
+    if (arrow) arrow.classList.toggle('rotate-180');
   }
 
   function applyFilters() {
@@ -388,37 +402,81 @@
     const priority = document.getElementById('filterPriority').value;
     const sort = document.getElementById('sortBy').value;
 
-    let cards = Array.from(document.querySelectorAll('.task-card'));
+    let todo = 0, prog = 0, done = 0;
 
-    cards.forEach(card => {
-      const titleMatch = card.dataset.title.includes(search);
-      const assigneeMatch = card.dataset.assignee.includes(search);
-      const statusMatch = !status || card.dataset.status === status;
-      const priorityMatch = !priority || card.dataset.priority === priority;
-      card.style.display = (titleMatch || assigneeMatch) && statusMatch && priorityMatch ? '' : 'none';
-    });
-
-    // Sort
-    const listView = document.getElementById('taskList');
-    if (listView) {
-      const visible = cards.filter(c => c.style.display !== 'none');
+    function filterRows(rows, sectionStatus) {
+      const statusMatch = !status || sectionStatus === status;
+      rows.forEach(row => {
+        const titleMatch = row.dataset.title.includes(search);
+        const assigneeMatch = row.dataset.assignee.includes(search);
+        const priorityMatch = !priority || row.dataset.priority === priority;
+        row.style.display = (titleMatch || assigneeMatch) && priorityMatch && statusMatch ? '' : 'none';
+      });
+      let visible = rows.filter(r => r.style.display !== 'none');
       visible.sort((a, b) => {
         if (sort === 'newest') return b.dataset.created.localeCompare(a.dataset.created);
         if (sort === 'oldest') return a.dataset.created.localeCompare(b.dataset.created);
         if (sort === 'due') {
+          if (!a.dataset.due && !b.dataset.due) return 0;
           if (!a.dataset.due) return 1;
           if (!b.dataset.due) return -1;
           return a.dataset.due.localeCompare(b.dataset.due);
         }
+        return 0;
       });
-      visible.forEach(card => listView.appendChild(card));
+      return visible.length;
     }
 
-    updateCounts();
+    // Kanban
+    ['TODO', 'PROG', 'DONE'].forEach(s => {
+      const container = document.getElementById('kanban-section-' + s);
+      if (!container) return;
+      const rows = Array.from(container.querySelectorAll('.kanban-task-row'));
+      const count = filterRows(rows, s);
+      const countEl = document.getElementById('kanban-count-' + s);
+      if (countEl) countEl.textContent = count;
+      const empty = container.querySelector('.kanban-empty');
+      if (empty) empty.classList.toggle('hidden', count > 0);
+      if (s === 'TODO') todo = count;
+      else if (s === 'PROG') prog = count;
+      else if (s === 'DONE') done = count;
+    });
+
+    // List
+    ['TODO', 'PROG', 'DONE'].forEach(s => {
+      const container = document.getElementById('list-rows-' + s);
+      if (!container) return;
+      const rows = Array.from(container.querySelectorAll('.list-task-row'));
+      const count = filterRows(rows, s);
+      const countEl = document.getElementById('list-count-' + s);
+      if (countEl) countEl.textContent = count;
+      const section = container.closest('.list-section');
+      const empty = section ? section.querySelector('.list-empty') : null;
+      if (empty) empty.classList.toggle('hidden', count > 0);
+    });
+
+    document.getElementById('count-todo').textContent = todo;
+    document.getElementById('count-prog').textContent = prog;
+    document.getElementById('count-done').textContent = done;
   }
 
-  function cycleStatus(taskId, currentStatus) {
-    const next = { 'TODO': 'PROG', 'PROG': 'DONE', 'DONE': 'TODO' };
+  function filterAssignTo(filterId, selectId) {
+    const dept = document.getElementById(filterId).value;
+    const select = document.getElementById(selectId);
+    select.querySelectorAll('option').forEach(opt => {
+      if (!opt.value) { opt.style.display = ''; return; }
+      if (!dept) { opt.style.display = ''; return; }
+      if (dept === '__exec__') {
+        opt.style.display = opt.dataset.dept === '__exec__' ? '' : 'none';
+      } else {
+        opt.style.display = (opt.dataset.dept === dept || opt.dataset.dept === '__exec__') ? '' : 'none';
+      }
+    });
+    const current = select.options[select.selectedIndex];
+    if (current && current.style.display === 'none') select.value = '';
+  }
+
+  function cycleStatus(taskId) {
     document.getElementById('cycleTaskId').value = taskId;
     document.getElementById('cycleStatusForm').submit();
   }
@@ -450,7 +508,6 @@
     if (el) el.addEventListener('click', function(e) { if (e.target === this) this.classList.add('hidden'); });
   });
 
-  // Init counts on load
-  updateCounts();
+  applyFilters();
 </script>
 {% endblock %}
