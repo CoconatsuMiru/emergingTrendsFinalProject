@@ -18,87 +18,152 @@
 {% else %}
 <div class="w-full max-w-4xl mx-auto p-8">
 
-  <h1 class="text-2xl font-bold text-gray-800 mb-2">Dashboard</h1>
-  <p class="text-sm text-gray-400 mb-8">Welcome back, {{ request.user.first_name }}! Here are your upcoming tasks.</p>
+  <!-- GREETING -->
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-gray-800" id="greeting">Hello, {{ request.user.first_name }}!</h1>
+    <p class="text-sm text-gray-400 mt-1">Here's what's on your plate today.</p>
+  </div>
 
-  {% if task_groups %}
-    {% for group in task_groups %}
-    <div class="mb-8">
-      <!-- DATE HEADER -->
-      <div class="flex items-center gap-3 mb-3">
-        <div class="text-sm font-semibold {% if group.is_today %}text-blue-600{% elif group.is_overdue %}text-red-500{% else %}text-gray-500{% endif %}">
-          {% if group.is_today %}
-            Today — {{ group.date_label }}
-          {% elif group.is_overdue %}
-            ⚠️ {{ group.date_label }}
-          {% else %}
-            {{ group.date_label }}
-          {% endif %}
-        </div>
-        <div class="flex-1 h-px bg-gray-200"></div>
-      </div>
-
-      <!-- TASKS FOR THIS DATE -->
-      <div class="space-y-2">
-        {% for task in group.tasks %}
-        <div class="bg-white rounded-lg shadow-sm p-4 flex items-center gap-4
-          {% if task.is_overdue %}border-l-4 border-l-red-400{% elif task.status == 'DONE' %}border-l-4 border-l-green-400{% elif task.status == 'PROG' %}border-l-4 border-l-blue-400{% else %}border-l-4 border-l-gray-200{% endif %}">
-
-          <!-- ORG LOGO -->
-          <div class="flex-shrink-0">
-            {% if task.organization.logo %}
-            <img src="{{ task.organization.logo.url }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;" />
-            {% else %}
-            <div style="width:40px;height:40px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">🏢</div>
-            {% endif %}
-          </div>
-
-          <!-- TASK DETAILS -->
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">{{ task.organization.name }}</p>
-            </div>
-            <p class="font-medium text-gray-800 truncate">{{ task.title }}</p>
-            {% if task.description %}
-            <p class="text-sm text-gray-500 truncate">{{ task.description }}</p>
-            {% endif %}
-          </div>
-
-          <!-- BADGES -->
-          <div class="flex items-center gap-2 flex-shrink-0">
-            <span class="text-xs px-2 py-1 rounded-full
-              {% if task.status == 'DONE' %}bg-green-100 text-green-700
-              {% elif task.status == 'PROG' %}bg-blue-100 text-blue-700
-              {% else %}bg-gray-100 text-gray-600{% endif %}">
-              {{ task.get_status_display }}
-            </span>
-            <span class="text-xs px-2 py-1 rounded-full
-              {% if task.priority == 'HIGH' %}bg-red-100 text-red-600
-              {% elif task.priority == 'MED' %}bg-yellow-100 text-yellow-600
-              {% else %}bg-green-100 text-green-600{% endif %}">
-              {{ task.get_priority_display }}
-            </span>
-            {% if task.is_overdue %}
-            <span class="text-xs px-2 py-1 rounded-full bg-red-100 text-red-600">⚠️ Overdue</span>
-            {% endif %}
-            {% if task.due_date %}
-            <span class="text-xs text-gray-400">Due {{ task.due_date }}</span>
-            {% endif %}
-          </div>
-        </div>
-        {% endfor %}
+  <!-- SUMMARY CARDS -->
+  <div class="grid grid-cols-3 gap-4 mb-8">
+    <div class="bg-white rounded-lg shadow-sm p-5 flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xl flex-shrink-0">📋</div>
+      <div>
+        <p class="text-2xl font-bold text-gray-800">{{ total_tasks }}</p>
+        <p class="text-xs text-gray-400">Total Tasks</p>
       </div>
     </div>
-    {% endfor %}
-
-  {% else %}
-  <div class="text-center py-16 text-gray-400">
-    <div class="text-5xl mb-4">✅</div>
-    <p class="text-lg font-medium text-gray-600">No tasks assigned to you yet!</p>
-    <p class="text-sm mt-1">When tasks are assigned to you they will appear here.</p>
+    <div class="bg-white rounded-lg shadow-sm p-5 flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center text-xl flex-shrink-0">⏳</div>
+      <div>
+        <p class="text-2xl font-bold text-yellow-600">{{ due_this_week }}</p>
+        <p class="text-xs text-gray-400">Due This Week</p>
+      </div>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm p-5 flex items-center gap-4">
+      <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-xl flex-shrink-0">⚠️</div>
+      <div>
+        <p class="text-2xl font-bold text-red-500">{{ overdue_count }}</p>
+        <p class="text-xs text-gray-400">Overdue</p>
+      </div>
+    </div>
   </div>
-  {% endif %}
+
+  <!-- ORGANIZATIONS QUICK LINKS + PROGRESS -->
+  <div class="mb-8">
+    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Your Organizations</h2>
+    <div class="grid grid-cols-1 gap-3">
+      {% for org_stat in org_stats %}
+      <a href="{% url 'org_tasks' org_stat.org.id %}" class="bg-white rounded-lg shadow-sm p-4 flex items-center gap-4 hover:shadow transition-shadow">
+        {% if org_stat.org.logo %}
+        <img src="{{ org_stat.org.logo.url }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;" />
+        {% else %}
+        <div style="width:40px;height:40px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">🏢</div>
+        {% endif %}
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-1">
+            <p class="font-semibold text-gray-800 text-sm">{{ org_stat.org.name }}</p>
+            <p class="text-xs text-gray-400">{{ org_stat.done }}/{{ org_stat.total }} tasks done</p>
+          </div>
+          <!-- PROGRESS BAR -->
+          <div class="w-full bg-gray-100 rounded-full h-1.5">
+            <div class="bg-gray-800 h-1.5 rounded-full transition-all"
+              style="width: {% if org_stat.total > 0 %}{{ org_stat.percent }}%{% else %}0%{% endif %}"></div>
+          </div>
+        </div>
+        <span class="text-gray-300 text-sm flex-shrink-0">&rarr;</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- TASK TIMELINE -->
+  <div>
+    <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Task Timeline</h2>
+
+    {% if task_groups %}
+      {% for group in task_groups %}
+      <div class="mb-6">
+        <!-- DATE HEADER -->
+        <div class="flex items-center gap-3 mb-3">
+          <div class="text-sm font-semibold {% if group.is_today %}text-blue-600{% elif group.is_overdue %}text-red-500{% else %}text-gray-500{% endif %}">
+            {% if group.is_today %}
+              Today — {{ group.date_label }}
+            {% elif group.is_overdue %}
+              ⚠️ {{ group.date_label }}
+            {% else %}
+              {{ group.date_label }}
+            {% endif %}
+          </div>
+          <div class="flex-1 h-px bg-gray-200"></div>
+        </div>
+
+        <!-- TASKS -->
+        <div class="space-y-2">
+          {% for task in group.tasks %}
+          <div class="bg-white rounded-lg shadow-sm p-4 flex items-center gap-4
+            {% if task.is_overdue %}border-l-4 border-l-red-400
+            {% elif task.status == 'DONE' %}border-l-4 border-l-green-400
+            {% elif task.status == 'PROG' %}border-l-4 border-l-blue-400
+            {% else %}border-l-4 border-l-gray-200{% endif %}">
+
+            {% if task.organization.logo %}
+            <img src="{{ task.organization.logo.url }}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;" />
+            {% else %}
+            <div style="width:36px;height:36px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0;">🏢</div>
+            {% endif %}
+
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">{{ task.organization.name }}</p>
+              <p class="font-medium text-gray-800 truncate">{{ task.title }}</p>
+              {% if task.description %}
+              <p class="text-xs text-gray-500 truncate">{{ task.description }}</p>
+              {% endif %}
+            </div>
+
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="text-xs px-2 py-1 rounded-full
+                {% if task.status == 'DONE' %}bg-green-100 text-green-700
+                {% elif task.status == 'PROG' %}bg-blue-100 text-blue-700
+                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                {{ task.get_status_display }}
+              </span>
+              <span class="text-xs px-2 py-1 rounded-full
+                {% if task.priority == 'HIGH' %}bg-red-100 text-red-600
+                {% elif task.priority == 'MED' %}bg-yellow-100 text-yellow-600
+                {% else %}bg-green-100 text-green-600{% endif %}">
+                {{ task.get_priority_display }}
+              </span>
+              {% if task.is_overdue %}
+              <span class="text-xs px-2 py-1 rounded-full bg-red-100 text-red-600">⚠️ Overdue</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+    {% else %}
+    <div class="text-center py-12 text-gray-400 bg-white rounded-lg shadow-sm">
+      <div class="text-4xl mb-3">✅</div>
+      <p class="text-lg font-medium text-gray-600">No tasks assigned to you yet!</p>
+      <p class="text-sm mt-1">When tasks are assigned to you they will appear here.</p>
+    </div>
+    {% endif %}
+  </div>
 
 </div>
+
+<script>
+  // Time-based greeting
+  const hour = new Date().getHours();
+  const name = "{{ request.user.first_name }}";
+  let greeting = "Hello";
+  if (hour < 12) greeting = "Good morning";
+  else if (hour < 18) greeting = "Good afternoon";
+  else greeting = "Good evening";
+  document.getElementById('greeting').textContent = `${greeting}, ${name}!`;
+</script>
 {% endif %}
 {% endblock %}

@@ -56,15 +56,30 @@ def dashboard(request):
     from collections import defaultdict
 
     user_orgs = Organization.objects.filter(membership__user=request.user)
+    today = timezone.now().date()
+    week_end = today + timezone.timedelta(days=7)
 
-    # Get all tasks assigned to this user across all orgs
+    # Get all tasks assigned to this user
     all_tasks = Task.objects.filter(
         assigned_to=request.user,
         organization__in=user_orgs
     ).select_related("organization").order_by("due_date", "created_at")
 
+    # Summary stats
+    total_tasks = all_tasks.count()
+    due_this_week = all_tasks.filter(due_date__gte=today, due_date__lte=week_end).count()
+    overdue_count = all_tasks.filter(due_date__lt=today).exclude(status="DONE").count()
+
+    # Org stats with progress
+    org_stats = []
+    for org in user_orgs:
+        org_tasks = all_tasks.filter(organization=org)
+        total = org_tasks.count()
+        done = org_tasks.filter(status="DONE").count()
+        percent = round((done / total) * 100) if total > 0 else 0
+        org_stats.append({"org": org, "total": total, "done": done, "percent": percent})
+
     # Group tasks by due date
-    today = timezone.now().date()
     groups_dict = defaultdict(list)
     no_due_date = []
 
@@ -74,16 +89,12 @@ def dashboard(request):
         else:
             no_due_date.append(task)
 
-    # Build sorted groups
     task_groups = []
     for date in sorted(groups_dict.keys()):
         tasks = groups_dict[date]
         is_today = date == today
         is_overdue = date < today
-
-        if is_today:
-            date_label = f"Today — {date.strftime('%B %d, %Y')}"
-        elif date.year == today.year:
+        if date.year == today.year:
             date_label = date.strftime('%A, %B %d')
         else:
             date_label = date.strftime('%A, %B %d, %Y')
@@ -96,7 +107,6 @@ def dashboard(request):
             "tasks": tasks
         })
 
-    # Add tasks with no due date at the end
     if no_due_date:
         task_groups.append({
             "date": None,
@@ -110,6 +120,10 @@ def dashboard(request):
         "active_page": "dashboard",
         "organizations": user_orgs,
         "task_groups": task_groups,
+        "total_tasks": total_tasks,
+        "due_this_week": due_this_week,
+        "overdue_count": overdue_count,
+        "org_stats": org_stats,
     })
 
 
