@@ -91,14 +91,15 @@
         <div id="kanban-section-{{ status_key }}" class="divide-y divide-gray-50">
           {% for task in tasks %}
           {% if task.status == status_key %}
-          <div class="kanban-task-row px-4 py-3 hover:bg-gray-50 {% if task.is_overdue %}border-l-4 border-l-red-400{% endif %}"
+          <div class="kanban-task-row px-4 py-3 hover:bg-gray-50 {% if task.is_overdue %}border-l-4 border-l-red-400{% endif %} {% if not is_big_four %}cursor-pointer{% endif %}"
             data-id="{{ task.id }}"
             data-status="{{ task.status }}"
             data-priority="{{ task.priority }}"
             data-title="{{ task.title|lower }}"
             data-assignee="{{ task.assigned_to.get_full_name|default:task.assigned_to.username|lower }}"
             data-due="{{ task.due_date|date:'Y-m-d'|default:'' }}"
-            data-created="{{ task.created_at|date:'Y-m-d' }}">
+            data-created="{{ task.created_at|date:'Y-m-d' }}"
+            {% if not is_big_four %}onclick="openViewTaskModal('{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.get_full_name|default:task.assigned_to.username|escapejs }}', '{{ task.get_status_display }}', '{{ task.status }}', '{{ task.get_priority_display }}', '{{ task.priority }}', '{{ task.due_date|default:'' }}', '{{ task.assigned_to_dept|default:''|escapejs }}')"{% endif %}>
             <div class="flex items-center justify-between gap-2">
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-gray-800 truncate">{{ task.title }}</p>
@@ -118,13 +119,13 @@
             <p class="text-xs mt-1 {% if task.is_overdue %}text-red-400{% else %}text-gray-400{% endif %}">Due: {{ task.due_date }}</p>
             {% endif %}
             {% if is_big_four %}
-            <div class="flex gap-1 mt-2">
+            <div class="flex gap-2 mt-2">
               <button onclick="cycleStatus({{ task.id }}, '{{ task.status }}')"
-                class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 hover:bg-gray-200">↻</button>
+                class="text-sm px-3 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200">↻ Status</button>
               <button onclick="openEditTaskModal('{{ task.id }}', '{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.id }}', '{{ task.status }}', '{{ task.due_date|default:'' }}', '{{ task.priority }}')"
-                class="text-xs px-2 py-0.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">Edit</button>
+                class="text-sm px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">Edit</button>
               <button onclick="openDeleteTaskModal('{{ task.id }}', '{{ task.title|escapejs }}')"
-                class="text-xs px-2 py-0.5 rounded border border-red-300 text-red-500 hover:bg-red-50">Del</button>
+                class="text-sm px-3 py-1 rounded border border-red-300 text-red-500 hover:bg-red-50">Delete</button>
             </div>
             {% endif %}
           </div>
@@ -157,27 +158,28 @@
 
       <div id="list-section-{{ status_key }}" class="border-t border-gray-100">
         <div class="grid grid-cols-12 gap-4 px-6 py-2 text-xs font-medium text-gray-400 border-b border-gray-100 bg-gray-50">
-          <div class="col-span-3">Task</div>
+          <div class="col-span-2">Task</div>
           <div class="col-span-2">Assigned To</div>
           <div class="col-span-2">Department</div>
           <div class="col-span-1">Priority</div>
           <div class="col-span-2">Due Date</div>
-          <div class="col-span-2 text-right">{% if is_big_four %}Actions{% endif %}</div>
+          <div class="col-span-3 text-right">{% if is_big_four %}Actions{% endif %}</div>
         </div>
 
         <div class="list-row-container" id="list-rows-{{ status_key }}">
           {% for task in tasks %}
           {% if task.status == status_key %}
           <div class="list-task-row grid grid-cols-12 gap-4 px-6 py-3 border-b border-gray-50 hover:bg-gray-50 items-center
-            {% if task.is_overdue %}border-l-4 border-l-red-400{% endif %}"
+            {% if task.is_overdue %}border-l-4 border-l-red-400{% endif %} {% if not is_big_four %}cursor-pointer{% endif %}"
             data-id="{{ task.id }}"
             data-status="{{ task.status }}"
             data-priority="{{ task.priority }}"
             data-title="{{ task.title|lower }}"
             data-assignee="{{ task.assigned_to.get_full_name|default:task.assigned_to.username|lower }}"
             data-due="{{ task.due_date|date:'Y-m-d'|default:'' }}"
-            data-created="{{ task.created_at|date:'Y-m-d' }}">
-            <div class="col-span-3">
+            data-created="{{ task.created_at|date:'Y-m-d' }}"
+            {% if not is_big_four %}onclick="openViewTaskModal('{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.get_full_name|default:task.assigned_to.username|escapejs }}', '{{ task.get_status_display }}', '{{ task.status }}', '{{ task.get_priority_display }}', '{{ task.priority }}', '{{ task.due_date|default:'' }}', '{{ task.assigned_to_dept|default:''|escapejs }}')"{% endif %}>
+            <div class="col-span-2">
               <p class="font-medium text-gray-800 text-sm">{{ task.title }}</p>
               {% if task.description %}<p class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ task.description }}</p>{% endif %}
               {% if task.is_overdue %}<span class="text-xs text-red-500">⚠️ Overdue</span>{% endif %}
@@ -204,14 +206,14 @@
               <span class="text-sm {% if task.is_overdue %}text-red-500 font-medium{% else %}text-gray-600{% endif %}">{{ task.due_date }}</span>
               {% else %}<span class="text-xs text-gray-300">No due date</span>{% endif %}
             </div>
-            <div class="col-span-2 flex gap-1 justify-end">
+            <div class="col-span-3 flex gap-2 justify-end">
               {% if is_big_four %}
               <button onclick="cycleStatus({{ task.id }}, '{{ task.status }}')"
-                class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200">↻</button>
+                class="text-sm px-3 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap">↻ Status</button>
               <button onclick="openEditTaskModal('{{ task.id }}', '{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.id }}', '{{ task.status }}', '{{ task.due_date|default:'' }}', '{{ task.priority }}')"
-                class="text-xs px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">Edit</button>
+                class="text-sm px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">Edit</button>
               <button onclick="openDeleteTaskModal('{{ task.id }}', '{{ task.title|escapejs }}')"
-                class="text-xs px-2 py-1 rounded border border-red-300 text-red-500 hover:bg-red-50">Del</button>
+                class="text-sm px-3 py-1 rounded border border-red-300 text-red-500 hover:bg-red-50">Delete</button>
               {% endif %}
             </div>
           </div>
@@ -373,6 +375,40 @@
 </div>
 {% endif %}
 
+<!-- VIEW TASK MODAL (members) -->
+{% if not is_big_four %}
+<div id="viewTaskModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-xl font-semibold text-gray-800" id="viewTaskTitle"></h2>
+      <button onclick="closeViewTaskModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <div class="flex gap-2 mb-4" id="viewTaskBadges"></div>
+    <div class="mb-4">
+      <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Description</p>
+      <p class="text-sm text-gray-700" id="viewTaskDescription"></p>
+    </div>
+    <div class="grid grid-cols-2 gap-4 mb-2">
+      <div>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Assigned To</p>
+        <p class="text-sm text-gray-700" id="viewTaskAssignee"></p>
+      </div>
+      <div>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Department</p>
+        <p class="text-sm text-gray-700" id="viewTaskDept"></p>
+      </div>
+      <div>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Due Date</p>
+        <p class="text-sm text-gray-700" id="viewTaskDue"></p>
+      </div>
+    </div>
+    <div class="flex justify-end mt-6">
+      <button onclick="closeViewTaskModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Close</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <form id="cycleStatusForm" method="POST" action="{% url 'cycle_task_status' org.id %}" style="display:none;">
   {% csrf_token %}
   <input type="hidden" name="task_id" id="cycleTaskId" />
@@ -476,6 +512,23 @@
     if (current && current.style.display === 'none') select.value = '';
   }
 
+  function openViewTaskModal(title, description, assignee, statusLabel, statusKey, priorityLabel, priorityKey, dueDate, dept) {
+    document.getElementById('viewTaskTitle').textContent = title;
+    document.getElementById('viewTaskDescription').textContent = description || 'No description provided.';
+    document.getElementById('viewTaskAssignee').textContent = assignee;
+    document.getElementById('viewTaskDept').textContent = dept || '—';
+    document.getElementById('viewTaskDue').textContent = dueDate || 'No due date';
+
+    const statusColors = { 'TODO': 'bg-gray-100 text-gray-600', 'PROG': 'bg-blue-100 text-blue-700', 'DONE': 'bg-green-100 text-green-700' };
+    const priorityColors = { 'HIGH': 'bg-red-100 text-red-600', 'MED': 'bg-yellow-100 text-yellow-600', 'LOW': 'bg-green-100 text-green-600' };
+    document.getElementById('viewTaskBadges').innerHTML = `
+      <span class="text-xs px-2 py-1 rounded-full ${statusColors[statusKey] || 'bg-gray-100 text-gray-600'}">${statusLabel}</span>
+      <span class="text-xs px-2 py-1 rounded-full ${priorityColors[priorityKey] || 'bg-gray-100 text-gray-600'}">${priorityLabel} Priority</span>
+    `;
+    document.getElementById('viewTaskModal').classList.remove('hidden');
+  }
+  function closeViewTaskModal() { document.getElementById('viewTaskModal').classList.add('hidden'); }
+
   function cycleStatus(taskId) {
     document.getElementById('cycleTaskId').value = taskId;
     document.getElementById('cycleStatusForm').submit();
@@ -503,7 +556,7 @@
   }
   function closeDeleteTaskModal() { document.getElementById('deleteTaskModal').classList.add('hidden'); }
 
-  ['addTaskModal', 'editTaskModal', 'deleteTaskModal'].forEach(id => {
+  ['addTaskModal', 'editTaskModal', 'deleteTaskModal', 'viewTaskModal'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', function(e) { if (e.target === this) this.classList.add('hidden'); });
   });

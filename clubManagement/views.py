@@ -52,10 +52,64 @@ def signUp(request):
 
 @login_required
 def dashboard(request):
+    from django.utils import timezone
+    from collections import defaultdict
+
     user_orgs = Organization.objects.filter(membership__user=request.user)
+
+    # Get all tasks assigned to this user across all orgs
+    all_tasks = Task.objects.filter(
+        assigned_to=request.user,
+        organization__in=user_orgs
+    ).select_related("organization").order_by("due_date", "created_at")
+
+    # Group tasks by due date
+    today = timezone.now().date()
+    groups_dict = defaultdict(list)
+    no_due_date = []
+
+    for task in all_tasks:
+        if task.due_date:
+            groups_dict[task.due_date].append(task)
+        else:
+            no_due_date.append(task)
+
+    # Build sorted groups
+    task_groups = []
+    for date in sorted(groups_dict.keys()):
+        tasks = groups_dict[date]
+        is_today = date == today
+        is_overdue = date < today
+
+        if is_today:
+            date_label = f"Today — {date.strftime('%B %d, %Y')}"
+        elif date.year == today.year:
+            date_label = date.strftime('%A, %B %d')
+        else:
+            date_label = date.strftime('%A, %B %d, %Y')
+
+        task_groups.append({
+            "date": date,
+            "date_label": date_label,
+            "is_today": is_today,
+            "is_overdue": is_overdue and not is_today,
+            "tasks": tasks
+        })
+
+    # Add tasks with no due date at the end
+    if no_due_date:
+        task_groups.append({
+            "date": None,
+            "date_label": "No Due Date",
+            "is_today": False,
+            "is_overdue": False,
+            "tasks": no_due_date
+        })
+
     return render(request, "dashboard.html", {
         "active_page": "dashboard",
-        "organizations": user_orgs
+        "organizations": user_orgs,
+        "task_groups": task_groups,
     })
 
 
@@ -354,9 +408,11 @@ def org_tasks(request, org_id):
     user_is_big_four = is_big_four(request.user, org)
 
     if user_is_big_four:
+        # Big 4 see all tasks
         org_task_list = Task.objects.filter(organization=org).select_related("assigned_to")
     else:
-        org_task_list = Task.objects.filter(organization=org, assigned_to=request.user)
+        # Regular members only see tasks assigned specifically to them
+        org_task_list = Task.objects.filter(organization=org, assigned_to=request.user).select_related("assigned_to")
 
     status_columns = [
         ("TODO", "To Do", "bg-gray-400"),
