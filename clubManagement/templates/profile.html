@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}My Profile – OrgFlow{% endblock %}
+{% block content %}
+<div class="p-8 max-w-lg mx-auto">
+  <h2 class="text-2xl font-bold text-gray-800 mb-6">My Profile</h2>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="mb-4 px-4 py-3 rounded text-sm
+        {% if message.tags == 'success' %}bg-green-100 text-green-700
+        {% else %}bg-red-100 text-red-700{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="POST" enctype="multipart/form-data" class="bg-white rounded-lg shadow-sm p-6 space-y-6">
+    {% csrf_token %}
+
+    <!-- Avatar preview -->
+    <div class="flex flex-col items-center gap-3">
+      {% if profile.profile_picture %}
+        <img src="{{ profile.profile_picture.url }}" id="avatarPreview"
+          class="w-28 h-28 rounded-full object-cover border-4 border-gray-200" alt="Profile picture">
+      {% else %}
+        <div id="avatarPlaceholder"
+          class="w-28 h-28 rounded-full bg-gray-200 flex items-center justify-center text-4xl font-bold text-gray-500">
+          {{ request.user.first_name|first|upper|default:request.user.username|first|upper }}
+        </div>
+        <img id="avatarPreview" src="" class="w-28 h-28 rounded-full object-cover border-4 border-gray-200 hidden" alt="Profile picture">
+      {% endif %}
+      <label class="cursor-pointer text-sm text-gray-500 hover:text-gray-800 underline">
+        Change photo
+        <input type="file" name="profile_picture" accept="image/*" class="hidden" onchange="previewAvatar(event)">
+      </label>
+      {% if profile.profile_picture %}
+        <button type="submit" name="remove_picture" value="1"
+          class="text-xs text-red-400 hover:text-red-600 underline">
+          Remove photo
+        </button>
+      {% endif %}
+    </div>
+
+    <!-- Name fields -->
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+        <input type="text" name="first_name" value="{{ request.user.first_name }}"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+        <input type="text" name="last_name" value="{{ request.user.last_name }}"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400 text-sm">
+      </div>
+    </div>
+
+    <!-- Read-only info -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+      <input type="text" value="{{ request.user.username }}" disabled
+        class="w-full border border-gray-200 rounded px-4 py-2 bg-gray-50 text-gray-400 text-sm cursor-not-allowed">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+      <input type="text" value="{{ request.user.email }}" disabled
+        class="w-full border border-gray-200 rounded px-4 py-2 bg-gray-50 text-gray-400 text-sm cursor-not-allowed">
+    </div>
+
+    <div class="flex justify-end">
+      <button type="submit"
+        class="px-6 py-2 bg-gray-900 text-white rounded hover:bg-black text-sm">
+        Save Changes
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function previewAvatar(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const preview = document.getElementById('avatarPreview');
+      const placeholder = document.getElementById('avatarPlaceholder');
+      if (preview) {
+        preview.src = e.target.result;
+        preview.classList.remove('hidden');
+      }
+      if (placeholder) placeholder.classList.add('hidden');
+    };
+    reader.readAsDataURL(file);
+  }
+</script>
+{% endblock %}

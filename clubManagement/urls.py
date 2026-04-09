@@ -39,5 +39,6 @@ urlpatterns = [
     path('add-member/<int:org_id>/', views.add_member, name='add_member'),
     path('remove-member/<int:org_id>/<int:user_id>/', views.remove_member, name='remove_member'),
 
+    path('profile/', views.profile, name='profile'),
     path('logout/', views.logout_user, name='logout'),
 ]

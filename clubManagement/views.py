@@ -4,7 +4,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
-from .models import Organization, Membership, Task, Department, Announcement
+from .models import Organization, Membership, Task, Department, Announcement, UserProfile
 
 
 def index(request):
@@ -651,3 +651,24 @@ def member_set_task_status(request, org_id, task_id):
 def logout_user(request):
     logout(request)
     return redirect("login")
+
+
+@login_required
+def profile(request):
+    profile_obj, _ = UserProfile.objects.get_or_create(user=request.user)
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        if first_name:
+            request.user.first_name = first_name
+        if last_name:
+            request.user.last_name = last_name
+        request.user.save()
+        if 'profile_picture' in request.FILES:
+            profile_obj.profile_picture = request.FILES['profile_picture']
+            profile_obj.save()
+        if 'remove_picture' in request.POST and profile_obj.profile_picture:
+            profile_obj.profile_picture.delete(save=True)
+        messages.success(request, 'Profile updated successfully!')
+        return redirect('profile')
+    return render(request, 'profile.html', {'profile': profile_obj, 'active_page': 'profile'})

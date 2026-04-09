@@ -73,8 +73,8 @@
       {% for status_key, status_label, dot_color in status_columns %}
       <div class="bg-white rounded-lg shadow-sm overflow-hidden">
         <!-- COLUMN HEADER -->
-        <button onclick="toggleSection('kanban-section-{{ status_key }}')"
-          class="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-left border-b border-gray-100">
+        <button data-toggle-target="kanban-section-{{ status_key }}"
+          class="kanban-toggle-btn w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-left border-b border-gray-100">
           <div class="flex items-center gap-2">
             <span class="w-2 h-2 rounded-full {{ dot_color }}"></span>
             <h3 class="font-semibold text-gray-800 text-sm">{{ status_label }}</h3>
@@ -121,11 +121,11 @@
             {% endif %}
             {% if is_big_four %}
             <div class="flex gap-2 mt-2">
-              <button onclick="cycleStatus({{ task.id }}, '{{ task.status }}')"
+              <button onclick="event.stopPropagation(); cycleStatus({{ task.id }}, '{{ task.status }}')"
                 class="text-sm px-3 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200">↻ Status</button>
-              <button onclick="openEditTaskModal('{{ task.id }}', '{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.id }}', '{{ task.status }}', '{{ task.due_date|default:'' }}', '{{ task.priority }}')"
+              <button onclick="event.stopPropagation(); openEditTaskModal('{{ task.id }}', '{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.id }}', '{{ task.status }}', '{{ task.due_date|default:'' }}', '{{ task.priority }}')"
                 class="text-sm px-3 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">Edit</button>
-              <button onclick="openDeleteTaskModal('{{ task.id }}', '{{ task.title|escapejs }}')"
+              <button onclick="event.stopPropagation(); openDeleteTaskModal('{{ task.id }}', '{{ task.title|escapejs }}')"
                 class="text-sm px-3 py-1 rounded border border-red-300 text-red-500 hover:bg-red-50">Delete</button>
             </div>
             {% endif %}
@@ -514,6 +514,18 @@
     document.getElementById('viewToggleBtn').textContent = isKanban ? '📋 List View' : '🗂 Kanban View';
     applyFilters();
   }
+
+  // Kanban column toggle — delegated, avoids inline onclick conflicts
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.kanban-toggle-btn');
+    if (!btn) return;
+    e.stopPropagation();
+    const targetId = btn.getAttribute('data-toggle-target');
+    const body = document.getElementById(targetId);
+    const arrow = document.getElementById('arrow-' + targetId);
+    if (body) body.classList.toggle('hidden');
+    if (arrow) arrow.classList.toggle('rotate-180');
+  });
 
   function toggleSection(id) {
     const body = document.getElementById(id);

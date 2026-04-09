@@ -73,7 +73,16 @@
           {% for membership in members %}
           {% if membership.role != 'MEM' %}
           <tr class="border-b last:border-0">
-            <td class="py-3 text-gray-800">{{ membership.user.get_full_name|default:membership.user.username }}</td>
+            <td class="py-3 text-gray-800">
+              <div class="flex items-center gap-2">
+              {% if membership.user.profile.profile_picture %}
+                <img src="{{ membership.user.profile.profile_picture.url }}" class="w-7 h-7 rounded-full object-cover flex-shrink-0" alt="">
+              {% else %}
+                <div class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">{{ membership.user.first_name|default:membership.user.username|first|upper }}</div>
+              {% endif %}
+                <span>{{ membership.user.get_full_name|default:membership.user.username }}</span>
+              </div>
+            </td>
             <td class="py-3 text-gray-500">@{{ membership.user.username }}</td>
             <td class="py-3">
               <span class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">{{ membership.get_role_display }}</span>
@@ -123,7 +132,16 @@
           {% for membership in members %}
           {% if membership.role == 'MEM' %}
           <tr class="border-b last:border-0 member-row">
-            <td class="py-3 text-gray-800 member-name">{{ membership.user.get_full_name|default:membership.user.username }}</td>
+            <td class="py-3 text-gray-800 member-name">
+              <div class="flex items-center gap-2">
+              {% if membership.user.profile.profile_picture %}
+                <img src="{{ membership.user.profile.profile_picture.url }}" class="w-7 h-7 rounded-full object-cover flex-shrink-0" alt="">
+              {% else %}
+                <div class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">{{ membership.user.first_name|default:membership.user.username|first|upper }}</div>
+              {% endif %}
+                <span>{{ membership.user.get_full_name|default:membership.user.username }}</span>
+              </div>
+            </td>
             <td class="py-3 text-gray-500 member-username">@{{ membership.user.username }}</td>
             <td class="py-3 text-gray-500 text-xs">
               {% if membership.department %}
@@ -236,7 +254,12 @@
           {% if dept.members.all %}
           <div class="flex flex-wrap gap-2 mb-3">
             {% for m in dept.members.all %}
-            <span class="inline-flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1 text-sm whitespace-nowrap">
+            <span class="inline-flex items-center gap-1.5 bg-gray-100 rounded-full px-3 py-1 text-sm whitespace-nowrap">
+              {% if m.user.profile.profile_picture %}
+                <img src="{{ m.user.profile.profile_picture.url }}" class="w-5 h-5 rounded-full object-cover flex-shrink-0" alt="">
+              {% else %}
+                <div class="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">{{ m.user.first_name|first|upper|default:m.user.username|first|upper }}</div>
+              {% endif %}
               <span class="text-gray-800">{{ m.user.get_full_name|default:m.user.username }}</span>
               <span class="text-gray-400 text-xs">@{{ m.user.username }}</span>
             </span>

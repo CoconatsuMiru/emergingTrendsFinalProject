@@ -5,20 +5,28 @@
     <title>{% block title %}OrgFlow{% endblock %}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}">
     <script src="https://unpkg.com/heroicons@2.0.18/dist/heroicons.js"></script>
   </head>
 
   <body class="bg-gray-100">
     <div class="flex h-screen">
+
       <!-- SIDEBAR -->
       <div class="w-64 bg-gray-900 text-white flex flex-col">
         <!-- LOGO / TITLE -->
         <div class="p-6 border-b border-gray-700">
           <h1 class="text-xl font-bold">OrgFlow</h1>
-          <p class="text-lg text-gray-400">
-            Hi, {{ request.user.first_name }}!
-          </p>
+          <a href="{% url 'profile' %}" class="flex items-center gap-3 mt-3 hover:opacity-80">
+            {% if request.user.profile.profile_picture %}
+              <img src="{{ request.user.profile.profile_picture.url }}" class="w-9 h-9 rounded-full object-cover flex-shrink-0" alt="avatar">
+            {% else %}
+              <div class="w-9 h-9 rounded-full bg-gray-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                {{ request.user.first_name|first|upper|default:request.user.username|first|upper }}
+              </div>
+            {% endif %}
+            <span class="text-gray-300 text-sm">Hi, {{ request.user.first_name|default:request.user.username }}!</span>
+          </a>
         </div>
 
         <!-- NAVIGATION -->
@@ -28,19 +36,8 @@
             href="{% url 'dashboard' %}"
             class="flex items-center gap-3 px-4 py-2 rounded-lg {% if active_page == 'dashboard' %}bg-gray-800{% else %}hover:bg-gray-800{% endif %}"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3"
-              />
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3" />
             </svg>
             Dashboard
           </a>
@@ -50,19 +47,8 @@
             href="{% url 'organizations' %}"
             class="flex items-center gap-3 px-4 py-2 rounded-lg {% if active_page == 'organizations' %}bg-gray-800{% else %}hover:bg-gray-800{% endif %}"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M17 20h5V4H2v16h5m10 0v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6m10 0H7"
-              />
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V4H2v16h5m10 0v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6m10 0H7" />
             </svg>
             Organizations
           </a>
@@ -72,19 +58,8 @@
             href="{% url 'tasks' %}"
             class="flex items-center gap-3 px-4 py-2 rounded-lg {% if active_page == 'tasks' %}bg-gray-800{% else %}hover:bg-gray-800{% endif %}"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5h6M9 9h6M9 13h6M9 17h6"
-              />
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5h6M9 9h6M9 13h6M9 17h6" />
             </svg>
             Tasks
           </a>
@@ -92,10 +67,7 @@
 
         <!-- LOGOUT -->
         <div class="p-4 border-t border-gray-700">
-          <a
-            href="{% url 'logout' %}"
-            class="block text-center bg-red-500 py-2 rounded-lg hover:bg-red-600"
-          >
+          <a href="{% url 'logout' %}" class="block text-center bg-red-500 py-2 rounded-lg hover:bg-red-600">
             Logout
           </a>
         </div>
@@ -105,6 +77,7 @@
       <div class="flex-1 overflow-y-auto">
         {% block content %}{% endblock %}
       </div>
+
     </div>
   </body>
 </html>
