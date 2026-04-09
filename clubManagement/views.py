@@ -4,7 +4,7 @@ from django.contrib.auth import authenticate, login as auth_login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 
-from .models import Organization, Membership, Task, Department
+from .models import Organization, Membership, Task, Department, Announcement
 
 
 def index(request):
@@ -59,18 +59,15 @@ def dashboard(request):
     today = timezone.now().date()
     week_end = today + timezone.timedelta(days=7)
 
-    # Get all tasks assigned to this user
     all_tasks = Task.objects.filter(
         assigned_to=request.user,
         organization__in=user_orgs
     ).select_related("organization").order_by("due_date", "created_at")
 
-    # Summary stats
     total_tasks = all_tasks.count()
     due_this_week = all_tasks.filter(due_date__gte=today, due_date__lte=week_end).count()
     overdue_count = all_tasks.filter(due_date__lt=today).exclude(status="DONE").count()
 
-    # Org stats with progress
     org_stats = []
     for org in user_orgs:
         org_tasks = all_tasks.filter(organization=org)
@@ -79,7 +76,11 @@ def dashboard(request):
         percent = round((done / total) * 100) if total > 0 else 0
         org_stats.append({"org": org, "total": total, "done": done, "percent": percent})
 
-    # Group tasks by due date
+    # Announcements from all orgs user belongs to
+    announcements = Announcement.objects.filter(
+        organization__in=user_orgs
+    ).select_related("organization", "created_by").order_by("-created_at")[:10]
+
     groups_dict = defaultdict(list)
     no_due_date = []
 
@@ -124,6 +125,7 @@ def dashboard(request):
         "due_this_week": due_this_week,
         "overdue_count": overdue_count,
         "org_stats": org_stats,
+        "announcements": announcements,
     })
 
 
@@ -169,9 +171,8 @@ def organization_detail(request, org_id):
     departments = Department.objects.filter(organization=org)
     user_is_big_four = is_big_four(request.user, org)
     user_is_president = is_president(request.user, org)
-
-    # Members with no department assigned (role=MEM only)
     unassigned_members = members.filter(role="MEM", department__isnull=True)
+    announcements = Announcement.objects.filter(organization=org).select_related("created_by").order_by("-created_at")
 
     return render(request, "organization_detail.html", {
         "org": org,
@@ -180,6 +181,7 @@ def organization_detail(request, org_id):
         "unassigned_members": unassigned_members,
         "is_president": user_is_president,
         "is_big_four": user_is_big_four,
+        "announcements": announcements,
         "active_page": "organizations"
     })
 
@@ -203,6 +205,26 @@ def create_organization(request):
 
 
 @login_required
+def edit_organization(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not is_president(request.user, org):
+        messages.error(request, "Only the President can edit the organization.")
+        return redirect("organization_detail", org_id=org_id)
+
+    if request.method == "POST":
+        org.name = request.POST.get("name", org.name)
+        org.description = request.POST.get("description", org.description)
+        has_two_vp = request.POST.get("has_two_vp") == "on"
+        org.has_two_vp = has_two_vp
+        if request.FILES.get("logo"):
+            org.logo = request.FILES.get("logo")
+        org.save()
+        messages.success(request, "Organization updated successfully.")
+
+    return redirect("organization_detail", org_id=org_id)
+
+
+@login_required
 def join_organization(request):
     if request.method == "POST":
         code = request.POST.get("invitation_code", "").strip().upper()
@@ -219,6 +241,26 @@ def join_organization(request):
         Membership.objects.create(user=request.user, organization=org, role="MEM")
         messages.success(request, f"You have successfully joined {org.name}!")
     return redirect("organizations")
+
+
+@login_required
+def leave_organization(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    membership = Membership.objects.filter(user=request.user, organization=org).first()
+
+    if not membership:
+        return redirect("organizations")
+
+    if membership.role == "PRES":
+        messages.error(request, "You are the President. Transfer ownership or delete the organization instead.")
+        return redirect("organization_detail", org_id=org_id)
+
+    if request.method == "POST":
+        membership.delete()
+        messages.success(request, f"You have left {org.name}.")
+        return redirect("organizations")
+
+    return redirect("organization_detail", org_id=org_id)
 
 
 @login_required
@@ -242,7 +284,6 @@ def edit_member_role(request, org_id):
             messages.error(request, f"The {role_display} position is already assigned to another member.")
             return redirect("organization_detail", org_id=org_id)
 
-        # If promoted to executive, remove from department
         if role != "MEM":
             membership.department = None
 
@@ -339,6 +380,7 @@ def assign_department(request, org_id):
             messages.success(request, f"{count} member{'s' if count > 1 else ''} assigned to {dept.name}.")
         else:
             messages.error(request, "No members were selected.")
+
     return redirect("organization_detail", org_id=org_id)
 
 
@@ -365,7 +407,7 @@ def remove_from_department(request, org_id):
             except Membership.DoesNotExist:
                 pass
         if count > 0:
-            messages.success(request, f"{count} member{{'s' if count > 1 else ''}} removed from their department.")
+            messages.success(request, f"{count} member{'s' if count > 1 else ''} removed from their department.")
 
     return redirect("organization_detail", org_id=org_id)
 
@@ -403,6 +445,49 @@ def delete_organization(request, org_id):
     return redirect("organizations")
 
 
+# ─── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
+
+@login_required
+def create_announcement(request, org_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not is_big_four(request.user, org):
+        messages.error(request, "You do not have permission to post announcements.")
+        return redirect("organization_detail", org_id=org_id)
+
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        content = request.POST.get("content", "").strip()
+        if title and content:
+            Announcement.objects.create(
+                organization=org,
+                created_by=request.user,
+                title=title,
+                content=content
+            )
+            messages.success(request, "Announcement posted.")
+        else:
+            messages.error(request, "Title and content are required.")
+
+    return redirect("organization_detail", org_id=org_id)
+
+
+@login_required
+def delete_announcement(request, org_id, announcement_id):
+    org = get_object_or_404(Organization, id=org_id)
+    if not is_big_four(request.user, org):
+        messages.error(request, "You do not have permission to do this.")
+        return redirect("organization_detail", org_id=org_id)
+
+    if request.method == "POST":
+        announcement = get_object_or_404(Announcement, id=announcement_id, organization=org)
+        announcement.delete()
+        messages.success(request, "Announcement deleted.")
+
+    return redirect("organization_detail", org_id=org_id)
+
+
+# ─── TASKS ────────────────────────────────────────────────────────────────────
+
 @login_required
 def tasks(request):
     user_orgs = Organization.objects.filter(membership__user=request.user)
@@ -419,29 +504,23 @@ def org_tasks(request, org_id):
         return redirect("tasks")
 
     members = Membership.objects.filter(organization=org).select_related("user")
+    departments = Department.objects.filter(organization=org)
     user_is_big_four = is_big_four(request.user, org)
 
     if user_is_big_four:
-        # Big 4 see all tasks
         org_task_list = Task.objects.filter(organization=org).select_related("assigned_to")
     else:
-        # Regular members only see tasks assigned specifically to them
         org_task_list = Task.objects.filter(organization=org, assigned_to=request.user).select_related("assigned_to")
+
+    for task in org_task_list:
+        membership = Membership.objects.filter(user=task.assigned_to, organization=org).first()
+        task.assigned_to_dept = membership.department.name if membership and membership.department else None
 
     status_columns = [
         ("TODO", "To Do", "bg-gray-400"),
         ("PROG", "In Progress", "bg-blue-400"),
         ("DONE", "Done", "bg-green-400"),
     ]
-
-    departments = Department.objects.filter(organization=org)
-
-    # Annotate each task with the assigned member's department name
-    for task in org_task_list:
-        membership = Membership.objects.filter(
-            user=task.assigned_to, organization=org
-        ).first()
-        task.assigned_to_dept = membership.department.name if membership and membership.department else None
 
     return render(request, "org_tasks.html", {
         "org": org,
@@ -450,7 +529,8 @@ def org_tasks(request, org_id):
         "departments": departments,
         "is_big_four": user_is_big_four,
         "status_columns": status_columns,
-        "active_page": "tasks"
+        "active_page": "tasks",
+        "current_user_id": request.user.id,
     })
 
 
@@ -522,11 +602,6 @@ def delete_task(request, org_id):
     return redirect("org_tasks", org_id=org_id)
 
 
-def logout_user(request):
-    logout(request)
-    return redirect("login")
-
-
 @login_required
 def cycle_task_status(request, org_id):
     org = get_object_or_404(Organization, id=org_id)
@@ -542,3 +617,37 @@ def cycle_task_status(request, org_id):
         task.save()
 
     return redirect("org_tasks", org_id=org_id)
+
+
+@login_required
+def member_complete_task(request, org_id, task_id):
+    org = get_object_or_404(Organization, id=org_id)
+    task = get_object_or_404(Task, id=task_id, organization=org, assigned_to=request.user)
+
+    if request.method == "POST":
+        task.status = "DONE"
+        task.save()
+        messages.success(request, f"'{task.title}' marked as done!")
+
+    return redirect("org_tasks", org_id=org_id)
+
+
+@login_required
+def member_set_task_status(request, org_id, task_id):
+    org = get_object_or_404(Organization, id=org_id)
+    task = get_object_or_404(Task, id=task_id, organization=org, assigned_to=request.user)
+
+    if request.method == "POST":
+        new_status = request.POST.get("status")
+        status_labels = {"TODO": "To Do", "PROG": "In Progress", "DONE": "Done"}
+        if new_status in status_labels:
+            task.status = new_status
+            task.save()
+            messages.success(request, f"'{task.title}' marked as {status_labels[new_status]}!")
+
+    return redirect("org_tasks", org_id=org_id)
+
+
+def logout_user(request):
+    logout(request)
+    return redirect("login")

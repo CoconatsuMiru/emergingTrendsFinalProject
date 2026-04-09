@@ -91,7 +91,7 @@
         <div id="kanban-section-{{ status_key }}" class="divide-y divide-gray-50">
           {% for task in tasks %}
           {% if task.status == status_key %}
-          <div class="kanban-task-row px-4 py-3 hover:bg-gray-50 {% if task.is_overdue %}border-l-4 border-l-red-400{% endif %} {% if not is_big_four %}cursor-pointer{% endif %}"
+          <div class="kanban-task-row px-4 py-3 hover:bg-gray-50 {% if task.is_overdue %}border-l-4 border-l-red-400{% endif %} cursor-pointer"
             data-id="{{ task.id }}"
             data-status="{{ task.status }}"
             data-priority="{{ task.priority }}"
@@ -99,7 +99,8 @@
             data-assignee="{{ task.assigned_to.get_full_name|default:task.assigned_to.username|lower }}"
             data-due="{{ task.due_date|date:'Y-m-d'|default:'' }}"
             data-created="{{ task.created_at|date:'Y-m-d' }}"
-            {% if not is_big_four %}onclick="openViewTaskModal('{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.get_full_name|default:task.assigned_to.username|escapejs }}', '{{ task.get_status_display }}', '{{ task.status }}', '{{ task.get_priority_display }}', '{{ task.priority }}', '{{ task.due_date|default:'' }}', '{{ task.assigned_to_dept|default:''|escapejs }}')"{% endif %}>
+            {% if is_big_four %}onclick="openExecViewTaskModal('{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.get_full_name|default:task.assigned_to.username|escapejs }}', '{{ task.get_status_display }}', '{{ task.status }}', '{{ task.get_priority_display }}', '{{ task.priority }}', '{{ task.due_date|default:'' }}', '{{ task.assigned_to_dept|default:''|escapejs }}', {{ task.id }}, {{ task.assigned_to.id }})"
+            {% else %}onclick="openViewTaskModal('{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.get_full_name|default:task.assigned_to.username|escapejs }}', '{{ task.get_status_display }}', '{{ task.status }}', '{{ task.get_priority_display }}', '{{ task.priority }}', '{{ task.due_date|default:'' }}', '{{ task.assigned_to_dept|default:''|escapejs }}', {{ task.id }})"{% endif %}>
             <div class="flex items-center justify-between gap-2">
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-gray-800 truncate">{{ task.title }}</p>
@@ -170,7 +171,7 @@
           {% for task in tasks %}
           {% if task.status == status_key %}
           <div class="list-task-row grid grid-cols-12 gap-4 px-6 py-3 border-b border-gray-50 hover:bg-gray-50 items-center
-            {% if task.is_overdue %}border-l-4 border-l-red-400{% endif %} {% if not is_big_four %}cursor-pointer{% endif %}"
+            {% if task.is_overdue %}border-l-4 border-l-red-400{% endif %} cursor-pointer"
             data-id="{{ task.id }}"
             data-status="{{ task.status }}"
             data-priority="{{ task.priority }}"
@@ -178,7 +179,8 @@
             data-assignee="{{ task.assigned_to.get_full_name|default:task.assigned_to.username|lower }}"
             data-due="{{ task.due_date|date:'Y-m-d'|default:'' }}"
             data-created="{{ task.created_at|date:'Y-m-d' }}"
-            {% if not is_big_four %}onclick="openViewTaskModal('{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.get_full_name|default:task.assigned_to.username|escapejs }}', '{{ task.get_status_display }}', '{{ task.status }}', '{{ task.get_priority_display }}', '{{ task.priority }}', '{{ task.due_date|default:'' }}', '{{ task.assigned_to_dept|default:''|escapejs }}')"{% endif %}>
+            {% if is_big_four %}onclick="openExecViewTaskModal('{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.get_full_name|default:task.assigned_to.username|escapejs }}', '{{ task.get_status_display }}', '{{ task.status }}', '{{ task.get_priority_display }}', '{{ task.priority }}', '{{ task.due_date|default:'' }}', '{{ task.assigned_to_dept|default:''|escapejs }}', {{ task.id }}, {{ task.assigned_to.id }})"
+            {% else %}onclick="openViewTaskModal('{{ task.title|escapejs }}', '{{ task.description|escapejs }}', '{{ task.assigned_to.get_full_name|default:task.assigned_to.username|escapejs }}', '{{ task.get_status_display }}', '{{ task.status }}', '{{ task.get_priority_display }}', '{{ task.priority }}', '{{ task.due_date|default:'' }}', '{{ task.assigned_to_dept|default:''|escapejs }}', {{ task.id }})"{% endif %}>
             <div class="col-span-2">
               <p class="font-medium text-gray-800 text-sm">{{ task.title }}</p>
               {% if task.description %}<p class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ task.description }}</p>{% endif %}
@@ -375,6 +377,70 @@
 </div>
 {% endif %}
 
+<!-- VIEW TASK MODAL (executives) -->
+{% if is_big_four %}
+<div id="execViewTaskModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-xl font-semibold text-gray-800" id="execViewTaskTitle"></h2>
+      <button onclick="closeExecViewTaskModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <div class="flex gap-2 mb-4" id="execViewTaskBadges"></div>
+    <div class="mb-4">
+      <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Description</p>
+      <p class="text-sm text-gray-700" id="execViewTaskDescription"></p>
+    </div>
+    <div class="grid grid-cols-2 gap-4 mb-2">
+      <div>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Assigned To</p>
+        <p class="text-sm text-gray-700" id="execViewTaskAssignee"></p>
+      </div>
+      <div>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Department</p>
+        <p class="text-sm text-gray-700" id="execViewTaskDept"></p>
+      </div>
+      <div>
+        <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Due Date</p>
+        <p class="text-sm text-gray-700" id="execViewTaskDue"></p>
+      </div>
+    </div>
+    <!-- Status buttons (only shown when task is assigned to the exec) -->
+    <div id="execStatusBtnRow" class="flex gap-2 mt-4" style="display:none !important;">
+      <button id="execMarkProgressBtn" style="display:none;"
+        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
+        🔄 Mark as In Progress
+      </button>
+      <button id="execMarkDoneBtn" style="display:none;"
+        class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
+        ✅ Mark as Done
+      </button>
+      <button id="execMarkTodoBtn" style="display:none;"
+        class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 text-sm">
+        ↩️ Mark as To Do
+      </button>
+    </div>
+    <div class="flex justify-between items-center mt-6">
+      <div class="flex gap-2">
+        <button id="execEditBtn"
+          class="px-4 py-2 border border-gray-300 text-gray-600 rounded hover:bg-gray-50 text-sm">
+          ✏️ Edit
+        </button>
+        <button id="execDeleteBtn"
+          class="px-4 py-2 border border-red-300 text-red-500 rounded hover:bg-red-50 text-sm">
+          🗑 Delete
+        </button>
+      </div>
+      <button onclick="closeExecViewTaskModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50 text-sm">Close</button>
+    </div>
+  </div>
+</div>
+
+<form id="execSetStatusForm" method="POST" action="" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="status" id="execSetStatusValue" />
+</form>
+{% endif %}
+
 <!-- VIEW TASK MODAL (members) -->
 {% if not is_big_four %}
 <div id="viewTaskModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
@@ -402,11 +468,35 @@
         <p class="text-sm text-gray-700" id="viewTaskDue"></p>
       </div>
     </div>
-    <div class="flex justify-end mt-6">
-      <button onclick="closeViewTaskModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Close</button>
+    <div class="flex justify-between items-center mt-6">
+      <div class="flex gap-2">
+        <button id="markProgressBtn" style="display:none;"
+          class="px-5 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
+          🔄 Mark as In Progress
+        </button>
+        <button id="markDoneBtn" style="display:none;"
+          class="px-5 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
+          ✅ Mark as Done
+        </button>
+        <button id="markTodoBtn" style="display:none;"
+          class="px-5 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 text-sm">
+          ↩️ Mark as To Do
+        </button>
+      </div>
+      <button onclick="closeViewTaskModal()" class="ml-auto px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Close</button>
     </div>
   </div>
 </div>
+
+<!-- COMPLETE TASK FORM (hidden) -->
+<form id="completeTaskForm" method="POST" action="" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="task_id" id="completeTaskId" />
+</form>
+<form id="setStatusForm" method="POST" action="" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="status" id="setStatusValue" />
+</form>
 {% endif %}
 
 <form id="cycleStatusForm" method="POST" action="{% url 'cycle_task_status' org.id %}" style="display:none;">
@@ -512,7 +602,7 @@
     if (current && current.style.display === 'none') select.value = '';
   }
 
-  function openViewTaskModal(title, description, assignee, statusLabel, statusKey, priorityLabel, priorityKey, dueDate, dept) {
+  function openViewTaskModal(title, description, assignee, statusLabel, statusKey, priorityLabel, priorityKey, dueDate, dept, taskId) {
     document.getElementById('viewTaskTitle').textContent = title;
     document.getElementById('viewTaskDescription').textContent = description || 'No description provided.';
     document.getElementById('viewTaskAssignee').textContent = assignee;
@@ -525,6 +615,31 @@
       <span class="text-xs px-2 py-1 rounded-full ${statusColors[statusKey] || 'bg-gray-100 text-gray-600'}">${statusLabel}</span>
       <span class="text-xs px-2 py-1 rounded-full ${priorityColors[priorityKey] || 'bg-gray-100 text-gray-600'}">${priorityLabel} Priority</span>
     `;
+
+    // Show status buttons based on current status
+    const markDoneBtn = document.getElementById('markDoneBtn');
+    const markProgressBtn = document.getElementById('markProgressBtn');
+    const markTodoBtn = document.getElementById('markTodoBtn');
+
+    function setStatusAction(newStatus) {
+      document.getElementById('setStatusValue').value = newStatus;
+      document.getElementById('setStatusForm').action = `/tasks/{{ org.id }}/${taskId}/set-status/`;
+      document.getElementById('setStatusForm').submit();
+    }
+
+    if (markDoneBtn) {
+      markDoneBtn.style.display = statusKey !== 'DONE' ? 'block' : 'none';
+      markDoneBtn.onclick = () => setStatusAction('DONE');
+    }
+    if (markProgressBtn) {
+      markProgressBtn.style.display = statusKey !== 'PROG' ? 'block' : 'none';
+      markProgressBtn.onclick = () => setStatusAction('PROG');
+    }
+    if (markTodoBtn) {
+      markTodoBtn.style.display = statusKey !== 'TODO' ? 'block' : 'none';
+      markTodoBtn.onclick = () => setStatusAction('TODO');
+    }
+
     document.getElementById('viewTaskModal').classList.remove('hidden');
   }
   function closeViewTaskModal() { document.getElementById('viewTaskModal').classList.add('hidden'); }
@@ -560,6 +675,60 @@
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', function(e) { if (e.target === this) this.classList.add('hidden'); });
   });
+
+  const execModal = document.getElementById('execViewTaskModal');
+  if (execModal) execModal.addEventListener('click', function(e) { if (e.target === this) this.classList.add('hidden'); });
+
+  function openExecViewTaskModal(title, description, assignee, statusLabel, statusKey, priorityLabel, priorityKey, dueDate, dept, taskId, assignedToId) {
+    document.getElementById('execViewTaskTitle').textContent = title;
+    document.getElementById('execViewTaskDescription').textContent = description || 'No description provided.';
+    document.getElementById('execViewTaskAssignee').textContent = assignee;
+    document.getElementById('execViewTaskDept').textContent = dept || '—';
+    document.getElementById('execViewTaskDue').textContent = dueDate || 'No due date';
+
+    const statusColors = { 'TODO': 'bg-gray-100 text-gray-600', 'PROG': 'bg-blue-100 text-blue-700', 'DONE': 'bg-green-100 text-green-700' };
+    const priorityColors = { 'HIGH': 'bg-red-100 text-red-600', 'MED': 'bg-yellow-100 text-yellow-600', 'LOW': 'bg-green-100 text-green-600' };
+    document.getElementById('execViewTaskBadges').innerHTML = `
+      <span class="text-xs px-2 py-1 rounded-full ${statusColors[statusKey] || 'bg-gray-100 text-gray-600'}">${statusLabel}</span>
+      <span class="text-xs px-2 py-1 rounded-full ${priorityColors[priorityKey] || 'bg-gray-100 text-gray-600'}">${priorityLabel} Priority</span>
+    `;
+
+    const isAssignedToMe = assignedToId === {{ current_user_id }};
+    const statusBtnRow = document.getElementById('execStatusBtnRow');
+    const progressBtn = document.getElementById('execMarkProgressBtn');
+    const doneBtn = document.getElementById('execMarkDoneBtn');
+    const todoBtn = document.getElementById('execMarkTodoBtn');
+
+    function execSetStatus(newStatus) {
+      document.getElementById('execSetStatusValue').value = newStatus;
+      document.getElementById('execSetStatusForm').action = `/tasks/{{ org.id }}/${taskId}/set-status/`;
+      document.getElementById('execSetStatusForm').submit();
+    }
+
+    if (isAssignedToMe && statusBtnRow) {
+      statusBtnRow.style.removeProperty('display');
+      statusBtnRow.style.display = 'flex';
+      if (progressBtn) { progressBtn.style.display = statusKey !== 'PROG' ? 'block' : 'none'; progressBtn.onclick = () => execSetStatus('PROG'); }
+      if (doneBtn) { doneBtn.style.display = statusKey !== 'DONE' ? 'block' : 'none'; doneBtn.onclick = () => execSetStatus('DONE'); }
+      if (todoBtn) { todoBtn.style.display = statusKey !== 'TODO' ? 'block' : 'none'; todoBtn.onclick = () => execSetStatus('TODO'); }
+    } else if (statusBtnRow) {
+      statusBtnRow.style.display = 'none';
+    }
+
+    document.getElementById('execEditBtn').onclick = (e) => {
+      e.stopPropagation();
+      closeExecViewTaskModal();
+      openEditTaskModal(taskId, title, description, assignedToId, statusKey, dueDate, priorityKey);
+    };
+    document.getElementById('execDeleteBtn').onclick = (e) => {
+      e.stopPropagation();
+      closeExecViewTaskModal();
+      openDeleteTaskModal(taskId, title);
+    };
+
+    document.getElementById('execViewTaskModal').classList.remove('hidden');
+  }
+  function closeExecViewTaskModal() { document.getElementById('execViewTaskModal').classList.add('hidden'); }
 
   applyFilters();
 </script>

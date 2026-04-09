@@ -32,12 +32,21 @@
         <span>Created by {{ org.owner.get_full_name|default:org.owner.username }}</span>
       </div>
     </div>
-    {% if is_president %}
-    <div class="text-right flex-shrink-0">
-      <p class="text-xs text-gray-400 mb-1">Invitation Code</p>
-      <span class="font-mono text-lg font-bold tracking-widest text-gray-800">{{ org.invitation_code }}</span>
+    <div class="flex flex-col items-end gap-2 flex-shrink-0">
+      {% if is_president %}
+      <div class="text-right">
+        <p class="text-xs text-gray-400 mb-1">Invitation Code</p>
+        <span class="font-mono text-lg font-bold tracking-widest text-gray-800">{{ org.invitation_code }}</span>
+      </div>
+      <button onclick="openEditOrgModal()" class="text-xs px-3 py-1.5 rounded border border-gray-300 text-gray-600 hover:bg-gray-50">
+        ✏️ Edit Organization
+      </button>
+      {% else %}
+      <button onclick="openLeaveModal()" class="text-xs px-3 py-1.5 rounded border border-red-300 text-red-500 hover:bg-red-50">
+        Leave Organization
+      </button>
+      {% endif %}
     </div>
-    {% endif %}
   </div>
 
   <!-- MEMBERS TABLE -->
@@ -151,6 +160,47 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- ANNOUNCEMENTS SECTION -->
+  <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-semibold text-gray-800">Announcements</h2>
+      {% if is_big_four %}
+      <button onclick="openAnnouncementModal()" class="px-4 py-2 bg-gray-900 text-white rounded hover:bg-black text-sm">
+        + Post Announcement
+      </button>
+      {% endif %}
+    </div>
+
+    {% if announcements %}
+    <div class="space-y-3">
+      {% for announcement in announcements %}
+      <div class="border border-gray-100 rounded-lg p-4">
+        <div class="flex justify-between items-start">
+          <div class="flex-1">
+            <h3 class="font-semibold text-gray-800">{{ announcement.title }}</h3>
+            <p class="text-sm text-gray-500 mt-1">{{ announcement.content }}</p>
+            <p class="text-xs text-gray-400 mt-2">
+              Posted by {{ announcement.created_by.get_full_name|default:announcement.created_by.username }}
+              &bull; {{ announcement.created_at|date:"M d, Y" }}
+            </p>
+          </div>
+          {% if is_big_four %}
+          <form method="POST" action="{% url 'delete_announcement' org.id announcement.id %}">
+            {% csrf_token %}
+            <button type="submit" class="ml-4 text-xs px-3 py-1 rounded border border-red-300 text-red-500 hover:bg-red-50 flex-shrink-0">
+              Delete
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-400 text-center py-4">No announcements yet.{% if is_big_four %} Click "+ Post Announcement" to create one.{% endif %}</p>
+    {% endif %}
   </div>
 
   <!-- DEPARTMENTS SECTION -->
@@ -352,7 +402,95 @@
 </div>
 {% endif %}
 
+<!-- ANNOUNCEMENT MODAL -->
+{% if is_big_four %}
+<div id="announcementModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-800">Post Announcement</h2>
+      <button onclick="closeAnnouncementModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <form method="POST" action="{% url 'create_announcement' org.id %}" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Title <span class="text-red-500">*</span></label>
+        <input type="text" name="title" required placeholder="Announcement title"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Content <span class="text-red-500">*</span></label>
+        <textarea name="content" required rows="4" placeholder="Write your announcement here..."
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"></textarea>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeAnnouncementModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-gray-900 text-white rounded hover:bg-black">Post</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<!-- LEAVE ORGANIZATION MODAL -->
+{% if not is_president %}
+<div id="leaveModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-gray-800">Leave Organization</h2>
+      <button onclick="closeLeaveModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <p class="text-gray-500 mb-2">Are you sure you want to leave <span class="font-semibold text-gray-800">{{ org.name }}</span>?</p>
+    <p class="text-sm text-red-400 mb-6">You will need a new invitation code to rejoin.</p>
+    <form method="POST" action="{% url 'leave_organization' org.id %}">
+      {% csrf_token %}
+      <div class="flex justify-end gap-3">
+        <button type="button" onclick="closeLeaveModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-red-500 text-white rounded hover:bg-red-600">Yes, Leave</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
 {% if is_president %}
+<!-- EDIT ORGANIZATION MODAL -->
+<div id="editOrgModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-xl font-semibold text-gray-800">Edit Organization</h2>
+      <button onclick="closeEditOrgModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    </div>
+    <form method="POST" action="{% url 'edit_organization' org.id %}" enctype="multipart/form-data" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Organization Name <span class="text-red-500">*</span></label>
+        <input type="text" name="name" required value="{{ org.name }}"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Short Description</label>
+        <textarea name="description" rows="3"
+          class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none">{{ org.description }}</textarea>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Logo <span class="text-gray-400 font-normal">(leave empty to keep current)</span></label>
+        <input type="file" name="logo" accept="image/*"
+          class="w-full text-sm text-gray-500 border border-gray-300 rounded px-4 py-2 cursor-pointer" />
+      </div>
+      <div>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="has_two_vp" class="accent-gray-900 w-4 h-4" {% if org.has_two_vp %}checked{% endif %} />
+          <span class="text-sm text-gray-700">Has Internal and External Vice President</span>
+        </label>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeEditOrgModal()" class="px-5 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button type="submit" class="px-5 py-2 bg-gray-900 text-white rounded hover:bg-black">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- EDIT ROLE MODAL -->
 <div id="editModal" class="hidden fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50">
   <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
@@ -611,6 +749,15 @@
     });
   }
 
+  function openAnnouncementModal() { document.getElementById('announcementModal').classList.remove('hidden'); }
+  function closeAnnouncementModal() { document.getElementById('announcementModal').classList.add('hidden'); }
+
+  function openLeaveModal() { const el = document.getElementById('leaveModal'); if(el) el.classList.remove('hidden'); }
+  function closeLeaveModal() { const el = document.getElementById('leaveModal'); if(el) el.classList.add('hidden'); }
+
+  function openEditOrgModal() { const el = document.getElementById('editOrgModal'); if(el) el.classList.remove('hidden'); }
+  function closeEditOrgModal() { const el = document.getElementById('editOrgModal'); if(el) el.classList.add('hidden'); }
+
   function openCreateDeptModal() { document.getElementById('createDeptModal').classList.remove('hidden'); }
   function closeCreateDeptModal() { document.getElementById('createDeptModal').classList.add('hidden'); }
 
@@ -650,7 +797,7 @@
   function openDeleteModal() { document.getElementById('deleteModal').classList.remove('hidden'); }
   function closeDeleteModal() { document.getElementById('deleteModal').classList.add('hidden'); }
 
-  ['viewDeptModal', 'createDeptModal', 'addMembersModal', 'removeMembersModal', 'deleteDeptModal', 'editModal', 'kickModal', 'deleteModal'].forEach(id => {
+  ['viewDeptModal', 'createDeptModal', 'addMembersModal', 'removeMembersModal', 'deleteDeptModal', 'editModal', 'kickModal', 'deleteModal', 'announcementModal', 'leaveModal', 'editOrgModal'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', function(e) { if (e.target === this) this.classList.add('hidden'); });
   });
