@@ -1,62 +1,265 @@
-{% load static tailwind_tags %}
+{% load static %}
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Login</title>
+    <title>Login — OrgFlow</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    {% tailwind_css %}
+    <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: 'DM Sans', sans-serif;
+        background: #0f0f0f;
+        min-height: 100vh;
+        display: flex;
+        overflow: hidden;
+      }
+
+      /* LEFT PANEL */
+      .left-panel {
+        width: 55%;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 60px;
+        background: linear-gradient(135deg, #0f1923 0%, #0d2137 50%, #0a1a2e 100%);
+        overflow: hidden;
+      }
+      .left-panel::before {
+        content: '';
+        position: absolute;
+        top: -200px; left: -200px;
+        width: 600px; height: 600px;
+        background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
+        pointer-events: none;
+      }
+      .left-panel::after {
+        content: '';
+        position: absolute;
+        bottom: -150px; right: -100px;
+        width: 500px; height: 500px;
+        background: radial-gradient(circle, rgba(20, 184, 166, 0.1) 0%, transparent 70%);
+        pointer-events: none;
+      }
+      .grid-overlay {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(56,189,248,0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(56,189,248,0.04) 1px, transparent 1px);
+        background-size: 48px 48px;
+      }
+      .brand {
+        position: relative;
+        z-index: 2;
+        margin-bottom: 60px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .brand img { height: 44px; width: auto; }
+      .brand-name {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -0.02em;
+      }
+      .hero-text {
+        position: relative;
+        z-index: 2;
+      }
+      .hero-text h2 {
+        font-family: 'Syne', sans-serif;
+        font-size: 3.2rem;
+        font-weight: 800;
+        line-height: 1.1;
+        color: #fff;
+        letter-spacing: -0.03em;
+        margin-bottom: 20px;
+      }
+      .hero-text h2 span {
+        background: linear-gradient(90deg, #38bdf8, #14b8a6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .hero-text p {
+        color: rgba(255,255,255,0.45);
+        font-size: 1rem;
+        line-height: 1.6;
+        max-width: 380px;
+      }
+      .features {
+        position: relative;
+        z-index: 2;
+        margin-top: 48px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: rgba(255,255,255,0.6);
+        font-size: 0.875rem;
+      }
+      .feature-dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #38bdf8, #14b8a6);
+        flex-shrink: 0;
+      }
+
+      /* RIGHT PANEL */
+      .right-panel {
+        width: 45%;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 60px 56px;
+      }
+      .form-header { margin-bottom: 36px; }
+      .form-header h1 {
+        font-family: 'Syne', sans-serif;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #0f1923;
+        letter-spacing: -0.02em;
+        margin-bottom: 6px;
+      }
+      .form-header p {
+        color: #94a3b8;
+        font-size: 0.9rem;
+      }
+      .form-group { margin-bottom: 20px; }
+      .form-group label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #475569;
+        margin-bottom: 6px;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+      .form-group input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 10px;
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.95rem;
+        color: #0f1923;
+        background: #f8fafc;
+        transition: all 0.2s;
+        outline: none;
+      }
+      .form-group input:focus {
+        border-color: #38bdf8;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(56,189,248,0.1);
+      }
+      .error-msg {
+        color: #ef4444;
+        font-size: 0.8rem;
+        margin-bottom: 16px;
+        padding: 10px 14px;
+        background: #fef2f2;
+        border-radius: 8px;
+        border-left: 3px solid #ef4444;
+      }
+      .submit-btn {
+        width: 100%;
+        padding: 13px;
+        background: linear-gradient(135deg, #0f1923, #0d2137);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-family: 'Syne', sans-serif;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        letter-spacing: 0.02em;
+        transition: all 0.2s;
+        margin-top: 4px;
+      }
+      .submit-btn:hover {
+        background: linear-gradient(135deg, #38bdf8, #14b8a6);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(56,189,248,0.3);
+      }
+      .footer-link {
+        text-align: center;
+        margin-top: 24px;
+        font-size: 0.875rem;
+        color: #94a3b8;
+      }
+      .footer-link a {
+        color: #0f1923;
+        font-weight: 600;
+        text-decoration: none;
+        border-bottom: 1.5px solid #38bdf8;
+        padding-bottom: 1px;
+      }
+      .footer-link a:hover { color: #38bdf8; }
+    </style>
   </head>
+  <body>
 
-  <body class="bg-gray-100 flex items-center justify-center h-screen">
-    <div class="bg-white p-8 rounded-xl shadow-lg w-96">
-      <h1 class="text-2xl font-bold text-center mb-6">Login</h1>
+    <!-- LEFT PANEL -->
+    <div class="left-panel">
+      <div class="grid-overlay"></div>
+      <div class="brand">
+        <img src="{% static 'logo_navbar.png' %}" alt="OrgFlow" />
+        <span class="brand-name">OrgFlow</span>
+      </div>
+      <div class="hero-text">
+        <h2>Manage your<br><span>organizations</span><br>with ease.</h2>
+        <p>A streamlined platform for managing members, tasks, departments, and announcements — all in one place.</p>
+      </div>
+      <div class="features">
+        <div class="feature-item"><div class="feature-dot"></div>Organize members into departments</div>
+        <div class="feature-item"><div class="feature-dot"></div>Assign and track tasks with priorities</div>
+        <div class="feature-item"><div class="feature-dot"></div>Post announcements to your team</div>
+        <div class="feature-item"><div class="feature-dot"></div>Invite members with unique codes</div>
+      </div>
+    </div>
 
-      {% if messages %} {% for message in messages %}
-      <p class="text-red-500 text-sm mb-3">{{ message }}</p>
-      {% endfor %} {% endif %}
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+      <div class="form-header">
+        <h1>Welcome back</h1>
+        <p>Sign in to continue to OrgFlow</p>
+      </div>
+
+      {% if messages %}
+      {% for message in messages %}
+      <div class="error-msg">{{ message }}</div>
+      {% endfor %}
+      {% endif %}
 
       <form method="POST">
         {% csrf_token %}
-
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-1">Username</label>
-          <input
-            type="text"
-            name="username"
-            placeholder="Enter username"
-            class="w-full px-3 py-2 border rounded-lg"
-          />
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" name="username" placeholder="Enter your username" />
         </div>
-
-        <div class="mb-6">
-          <label class="block text-sm font-medium mb-1">Password</label>
-          <input
-            type="password"
-            name="password"
-            placeholder="Enter password"
-            class="w-full px-3 py-2 border rounded-lg"
-          />
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Enter your password" />
         </div>
-
-        <button
-          type="submit"
-          class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600"
-        >
-          Login
-        </button>
+        <button type="submit" class="submit-btn">Sign In →</button>
       </form>
 
-      <div class="text-center mt-4">
-        <p class="text-sm text-gray-600">Don't have an account?</p>
-
-        <a
-          href="{% url 'signup' %}"
-          class="mt-2 inline-block text-blue-500 hover:underline"
-        >
-          Sign Up
-        </a>
+      <div class="footer-link">
+        Don't have an account? <a href="{% url 'signup' %}">Sign Up</a>
       </div>
     </div>
+
   </body>
 </html>

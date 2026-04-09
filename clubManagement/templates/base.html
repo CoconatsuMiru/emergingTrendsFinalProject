@@ -16,7 +16,10 @@
       <div class="w-64 bg-gray-900 text-white flex flex-col">
         <!-- LOGO / TITLE -->
         <div class="p-6 border-b border-gray-700">
-          <h1 class="text-xl font-bold">OrgFlow</h1>
+          <div class="flex items-center gap-2">
+            <img src="{% static 'logo_navbar.png' %}" alt="OrgFlow logo" style="height:28px;width:auto;display:inline-block;" />
+            <h1 class="text-xl font-bold">OrgFlow</h1>
+          </div>
           <a href="{% url 'profile' %}" class="flex items-center gap-3 mt-3 hover:opacity-80">
             {% if request.user.profile.profile_picture %}
               <img src="{{ request.user.profile.profile_picture.url }}" class="w-9 h-9 rounded-full object-cover flex-shrink-0" alt="avatar">
