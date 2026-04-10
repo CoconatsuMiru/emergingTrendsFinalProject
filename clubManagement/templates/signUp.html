@@ -1,289 +1,90 @@
 {% load static %}
 <!doctype html>
 <html lang="en">
-  <head>
-    <title>Sign Up — OrgFlow</title>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      body {
-        font-family: 'DM Sans', sans-serif;
-        background: #0f0f0f;
-        min-height: 100vh;
-        display: flex;
-        overflow: hidden;
-      }
-      .left-panel {
-        width: 55%;
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        padding: 60px;
-        background: linear-gradient(135deg, #0f1923 0%, #0d2137 50%, #0a1a2e 100%);
-        overflow: hidden;
-      }
-      .left-panel::before {
-        content: '';
-        position: absolute;
-        top: -200px; left: -200px;
-        width: 600px; height: 600px;
-        background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
-        pointer-events: none;
-      }
-      .left-panel::after {
-        content: '';
-        position: absolute;
-        bottom: -150px; right: -100px;
-        width: 500px; height: 500px;
-        background: radial-gradient(circle, rgba(20, 184, 166, 0.1) 0%, transparent 70%);
-        pointer-events: none;
-      }
-      .grid-overlay {
-        position: absolute;
-        inset: 0;
-        background-image:
-          linear-gradient(rgba(56,189,248,0.04) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(56,189,248,0.04) 1px, transparent 1px);
-        background-size: 48px 48px;
-      }
-      .brand {
-        position: relative;
-        z-index: 2;
-        margin-bottom: 60px;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-      }
-      .brand img { height: 44px; width: auto; }
-      .brand-name {
-        font-family: 'Syne', sans-serif;
-        font-size: 1.6rem;
-        font-weight: 800;
-        color: #fff;
-        letter-spacing: -0.02em;
-      }
-      .hero-text {
-        position: relative;
-        z-index: 2;
-      }
-      .hero-text h2 {
-        font-family: 'Syne', sans-serif;
-        font-size: 3.2rem;
-        font-weight: 800;
-        line-height: 1.1;
-        color: #fff;
-        letter-spacing: -0.03em;
-        margin-bottom: 20px;
-      }
-      .hero-text h2 span {
-        background: linear-gradient(90deg, #38bdf8, #14b8a6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-      }
-      .hero-text p {
-        color: rgba(255,255,255,0.45);
-        font-size: 1rem;
-        line-height: 1.6;
-        max-width: 380px;
-      }
-      .features {
-        position: relative;
-        z-index: 2;
-        margin-top: 48px;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-      }
-      .feature-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        color: rgba(255,255,255,0.6);
-        font-size: 0.875rem;
-      }
-      .feature-dot {
-        width: 6px; height: 6px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #38bdf8, #14b8a6);
-        flex-shrink: 0;
-      }
-      .right-panel {
-        width: 45%;
-        background: #fff;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        padding: 48px 56px;
-        overflow-y: auto;
-      }
-      .form-header { margin-bottom: 28px; }
-      .form-header h1 {
-        font-family: 'Syne', sans-serif;
-        font-size: 2rem;
-        font-weight: 700;
-        color: #0f1923;
-        letter-spacing: -0.02em;
-        margin-bottom: 6px;
-      }
-      .form-header p { color: #94a3b8; font-size: 0.9rem; }
-      .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 14px;
-        margin-bottom: 16px;
-      }
-      .form-group { margin-bottom: 16px; }
-      .form-group label {
-        display: block;
-        font-size: 0.75rem;
-        font-weight: 500;
-        color: #475569;
-        margin-bottom: 6px;
-        letter-spacing: 0.03em;
-        text-transform: uppercase;
-      }
-      .form-group input {
-        width: 100%;
-        padding: 11px 15px;
-        border: 1.5px solid #e2e8f0;
-        border-radius: 10px;
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.9rem;
-        color: #0f1923;
-        background: #f8fafc;
-        transition: all 0.2s;
-        outline: none;
-      }
-      .form-group input:focus {
-        border-color: #38bdf8;
-        background: #fff;
-        box-shadow: 0 0 0 3px rgba(56,189,248,0.1);
-      }
-      .error-msg {
-        color: #ef4444;
-        font-size: 0.8rem;
-        margin-bottom: 16px;
-        padding: 10px 14px;
-        background: #fef2f2;
-        border-radius: 8px;
-        border-left: 3px solid #ef4444;
-      }
-      .submit-btn {
-        width: 100%;
-        padding: 13px;
-        background: linear-gradient(135deg, #0f1923, #0d2137);
-        color: #fff;
-        border: none;
-        border-radius: 10px;
-        font-family: 'Syne', sans-serif;
-        font-size: 0.95rem;
-        font-weight: 600;
-        cursor: pointer;
-        letter-spacing: 0.02em;
-        transition: all 0.2s;
-        margin-top: 4px;
-      }
-      .submit-btn:hover {
-        background: linear-gradient(135deg, #38bdf8, #14b8a6);
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(56,189,248,0.3);
-      }
-      .footer-link {
-        text-align: center;
-        margin-top: 20px;
-        font-size: 0.875rem;
-        color: #94a3b8;
-      }
-      .footer-link a {
-        color: #0f1923;
-        font-weight: 600;
-        text-decoration: none;
-        border-bottom: 1.5px solid #38bdf8;
-        padding-bottom: 1px;
-      }
-      .footer-link a:hover { color: #38bdf8; }
-    </style>
-  </head>
-  <body>
+<head>
+  <title>Sign Up — OrgFlow</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
 
-    <!-- LEFT PANEL -->
-    <div class="left-panel">
-      <div class="grid-overlay"></div>
-      <div class="brand">
-        <img src="{% static 'logo_navbar.png' %}" alt="OrgFlow" />
-        <span class="brand-name">OrgFlow</span>
-      </div>
-      <div class="hero-text">
-        <h2>Join your<br><span>organization</span><br>today.</h2>
-        <p>Create your account and start collaborating with your team — manage tasks, departments, and more.</p>
-      </div>
-      <div class="features">
-        <div class="feature-item"><div class="feature-dot"></div>Organize members into departments</div>
-        <div class="feature-item"><div class="feature-dot"></div>Assign and track tasks with priorities</div>
-        <div class="feature-item"><div class="feature-dot"></div>Post announcements to your team</div>
-        <div class="feature-item"><div class="feature-dot"></div>Invite members with unique codes</div>
-      </div>
+<body class="flex min-h-screen bg-[#0f0f0f] font-[DM_Sans] overflow-hidden">
+
+<!-- LEFT SAME AS LOGIN (reuse exactly) -->
+<div class="w-[55%] relative flex flex-col justify-center p-[60px]
+    bg-gradient-to-br from-[#0f1923] via-[#0d2137] to-[#0a1a2e] overflow-hidden">
+
+  <div class="absolute inset-0 
+    bg-[linear-gradient(rgba(56,189,248,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(56,189,248,0.04)_1px,transparent_1px)]
+    bg-[size:48px_48px]"></div>
+
+  <div class="absolute -top-[200px] -left-[200px] w-[600px] h-[600px]
+    bg-[radial-gradient(circle,rgba(56,189,248,0.12)_0%,transparent_70%)]"></div>
+
+  <div class="absolute -bottom-[150px] -right-[100px] w-[500px] h-[500px]
+    bg-[radial-gradient(circle,rgba(20,184,166,0.1)_0%,transparent_70%)]"></div>
+
+  <div class="relative z-10 flex items-center gap-3 mb-14">
+    <img src="{% static 'logo_navbar.png' %}" class="h-11">
+    <span class="font-[Syne] text-xl font-extrabold text-white">OrgFlow</span>
+  </div>
+
+  <h2 class="font-[Syne] text-[3.2rem] font-extrabold text-white leading-tight">
+    Join your<br>
+    <span class="bg-gradient-to-r from-sky-400 to-teal-400 bg-clip-text text-transparent">organization</span><br>
+    today.
+  </h2>
+
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="w-[45%] bg-white flex flex-col justify-center px-14 py-12 overflow-y-auto">
+
+  <div class="mb-7">
+    <h1 class="font-[Syne] text-2xl font-bold text-[#0f1923]">Create account</h1>
+    <p class="text-slate-400 text-sm">Fill in your details to get started</p>
+  </div>
+
+  <form method="POST" class="space-y-4">
+    {% csrf_token %}
+
+    <div class="grid grid-cols-2 gap-4">
+      <input type="text" name="first_name" placeholder="First name"
+        class="px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-400 outline-none">
+
+      <input type="text" name="last_name" placeholder="Last name"
+        class="px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-400 outline-none">
     </div>
 
-    <!-- RIGHT PANEL -->
-    <div class="right-panel">
-      <div class="form-header">
-        <h1>Create account</h1>
-        <p>Fill in your details to get started</p>
-      </div>
+    <input type="text" name="username" placeholder="Username"
+      class="w-full px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-400 outline-none">
 
-      {% if messages %}
-      {% for message in messages %}
-      <div class="error-msg">{{ message }}</div>
-      {% endfor %}
-      {% endif %}
+    <input type="email" name="email" placeholder="Email"
+      class="w-full px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-400 outline-none">
 
-      <form method="POST">
-        {% csrf_token %}
+    <input type="password" name="password" placeholder="Password"
+      class="w-full px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-400 outline-none">
 
-        <div class="form-row">
-          <div class="form-group" style="margin-bottom:0;">
-            <label>First Name</label>
-            <input type="text" name="first_name" placeholder="Juan" />
-          </div>
-          <div class="form-group" style="margin-bottom:0;">
-            <label>Last Name</label>
-            <input type="text" name="last_name" placeholder="Dela Cruz" />
-          </div>
-        </div>
+    <input type="password" name="confirm_password" placeholder="Confirm password"
+      class="w-full px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-400 outline-none">
 
-        <div class="form-group">
-          <label>Username</label>
-          <input type="text" name="username" placeholder="juandelacruz" />
-        </div>
+    <button type="submit"
+      class="w-full py-3 rounded-lg font-[Syne] font-semibold text-white
+      bg-gradient-to-br from-[#0f1923] to-[#0d2137]
+      hover:from-sky-400 hover:to-teal-400 transition">
+      Create Account →
+    </button>
+  </form>
 
-        <div class="form-group">
-          <label>Email Address</label>
-          <input type="email" name="email" placeholder="juan@email.com" />
-        </div>
+  <div class="text-center mt-5 text-sm text-slate-400">
+    Already have an account?
+    <a href="{% url 'login' %}" class="text-[#0f1923] font-semibold border-b border-sky-400 hover:text-sky-400">
+      Sign In
+    </a>
+  </div>
 
-        <div class="form-group">
-          <label>Password</label>
-          <input type="password" name="password" placeholder="Create a password" />
-        </div>
+</div>
 
-        <div class="form-group">
-          <label>Confirm Password</label>
-          <input type="password" name="confirm_password" placeholder="Repeat your password" />
-        </div>
-
-        <button type="submit" class="submit-btn">Create Account →</button>
-      </form>
-
-      <div class="footer-link">
-        Already have an account? <a href="{% url 'login' %}">Sign In</a>
-      </div>
-    </div>
-
-  </body>
+</body>
 </html>
